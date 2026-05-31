@@ -1,0 +1,141 @@
+/*
+ * Component classes (DRY): Tailwind utilities composed via @apply.
+ * Markup uses semantic names (e.g. `className="btn btn-primary"`) instead of
+ * long inline utility strings. One-off layout tweaks may still use raw utilities.
+ */
+@layer components {
+  /* ---------- layout ---------- */
+  .page {
+    @apply mx-auto w-full max-w-5xl px-4 py-10 sm:px-6 lg:px-8;
+  }
+  .navbar {
+    @apply sticky top-0 z-40 w-full border-b border-border bg-background/80 backdrop-blur;
+  }
+  .navbar-inner {
+    @apply mx-auto flex h-16 max-w-5xl items-center justify-between px-4 sm:px-6 lg:px-8;
+  }
+  .brand {
+    @apply flex items-center gap-2 text-lg font-semibold tracking-tight;
+  }
+  .gradient-text {
+    @apply bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent;
+  }
+
+  /* ---------- button ---------- */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg
+      text-sm font-medium transition-colors duration-150
+      focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
+      focus-visible:ring-offset-2 focus-visible:ring-offset-background
+      disabled:pointer-events-none disabled:opacity-50;
+  }
+  .btn-md {
+    @apply h-10 px-4;
+  }
+  .btn-sm {
+    @apply h-8 px-3 text-xs;
+  }
+  .btn-lg {
+    @apply h-12 px-6 text-base;
+  }
+  .btn-icon {
+    @apply h-10 w-10 p-0;
+  }
+  .btn-primary {
+    @apply bg-gradient-to-r from-primary to-accent text-primary-foreground
+      shadow-sm hover:opacity-90;
+  }
+  .btn-secondary {
+    @apply bg-muted text-foreground hover:bg-muted/70;
+  }
+  .btn-outline {
+    @apply border border-border bg-transparent hover:bg-muted;
+  }
+  .btn-ghost {
+    @apply bg-transparent hover:bg-muted;
+  }
+
+  /* ---------- card ---------- */
+  .card {
+    @apply rounded-xl border border-border bg-card text-card-foreground shadow-sm;
+  }
+  .card-pad {
+    @apply p-6;
+  }
+  .card-title {
+    @apply text-lg font-semibold tracking-tight;
+  }
+  .card-subtitle {
+    @apply text-sm text-muted-foreground;
+  }
+
+  /* ---------- badge ---------- */
+  .badge {
+    @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5
+      text-xs font-medium;
+  }
+  .badge-neutral {
+    @apply bg-muted text-muted-foreground;
+  }
+  .badge-critical {
+    @apply bg-critical/10 text-critical;
+  }
+  .badge-warning {
+    @apply bg-warning/10 text-warning;
+  }
+  .badge-optional {
+    @apply bg-optional/10 text-optional;
+  }
+
+  /* ---------- form ---------- */
+  .label {
+    @apply mb-1.5 block text-sm font-medium text-foreground;
+  }
+  .input {
+    @apply h-10 w-full rounded-lg border border-input bg-background px-3 text-sm
+      placeholder:text-muted-foreground
+      focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
+      focus-visible:ring-offset-2 focus-visible:ring-offset-background;
+  }
+  .select {
+    @apply h-10 w-full appearance-none rounded-lg border border-input bg-background
+      px-3 pr-8 text-sm
+      focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
+      focus-visible:ring-offset-2 focus-visible:ring-offset-background;
+  }
+
+  /* ---------- dropzone ---------- */
+  .dropzone {
+    @apply flex flex-col items-center justify-center gap-3 rounded-xl border-2
+      border-dashed border-border bg-muted/30 px-6 py-12 text-center
+      transition-colors duration-150 hover:border-primary/50 hover:bg-muted/50;
+  }
+
+  /* ---------- tag chip ---------- */
+  .tag-chip {
+    @apply flex w-full items-start gap-3 rounded-lg border border-border bg-card
+      p-4 text-left transition-colors duration-150 hover:bg-muted/50
+      focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring;
+  }
+  .tag-dot {
+    @apply mt-1.5 h-2 w-2 shrink-0 rounded-full;
+  }
+
+  /* ---------- dialog (radix) ---------- */
+  .dialog-overlay {
+    @apply fixed inset-0 z-50 bg-black/50 backdrop-blur-sm;
+  }
+  .dialog-content {
+    @apply fixed left-1/2 top-1/2 z-50 w-[92vw] max-w-lg -translate-x-1/2
+      -translate-y-1/2 rounded-xl border border-border bg-card p-6 shadow-lg
+      focus:outline-none;
+  }
+
+  /* ---------- match ring ---------- */
+  .match-ring-track {
+    @apply text-muted;
+  }
+  .match-ring-value {
+    @apply text-primary transition-[stroke-dashoffset] duration-700 ease-out;
+  }
+}

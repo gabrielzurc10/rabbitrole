@@ -1,0 +1,64 @@
+package com.rabbitrole.resume;
+
+import com.rabbitrole.common.ApiException;
+import com.rabbitrole.resume.dto.ResumeResponse;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.mock.web.MockMultipartFile;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+/**
+ * Service-level tests with a stub extractor — no real PDF/POI parsing needed.
+ * Verifies the upload → extract → persist → respond flow and its guard rails.
+ */
+class ResumeServiceTest {
+
+    private ResumeService service;
+
+    @BeforeEach
+    void setUp() {
+        // Stub extractor: returns canned text instead of parsing bytes.
+        ResumeTextExtractor extractor = new ResumeTextExtractor() {
+            @Override
+            public String extract(String filename, String contentType, byte[] bytes) {
+                return "Senior Backend Engineer with 6 years building Java services.";
+            }
+        };
+        service = new ResumeService(new LocalStorage(), extractor, new InMemoryResumeRepository());
+    }
+
+    @Test
+    void uploadExtractsTextAndIsRetrievable() {
+        MockMultipartFile file = new MockMultipartFile(
+                "file", "resume.pdf", "application/pdf", "%PDF-1.4 fake".getBytes());
+
+        ResumeResponse uploaded = service.upload(file);
+
+        assertThat(uploaded.id()).isNotBlank();
+        assertThat(uploaded.filename()).isEqualTo("resume.pdf");
+        assertThat(uploaded.textLength()).isGreaterThan(0);
+        assertThat(uploaded.textPreview()).contains("Backend Engineer");
+
+        ResumeResponse fetched = service.get(uploaded.id());
+        assertThat(fetched.id()).isEqualTo(uploaded.id());
+    }
+
+    @Test
+    void emptyFileIsRejected() {
+        MockMultipartFile empty = new MockMultipartFile(
+                "file", "resume.pdf", "application/pdf", new byte[0]);
+
+        assertThatThrownBy(() -> service.upload(empty))
+                .isInstanceOf(ApiException.class)
+                .hasMessageContaining("No resume file");
+    }
+
+    @Test
+    void unknownIdIsNotFound() {
+        assertThatThrownBy(() -> service.get("does-not-exist"))
+                .isInstanceOf(ApiException.class)
+                .hasMessageContaining("No resume found");
+    }
+}

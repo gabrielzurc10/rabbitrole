@@ -1,0 +1,38 @@
+# ---- General ----
+.DS_Store
+*.log
+.env
+.env.*
+!.env.example
+
+# ---- Node / Next.js (frontend) ----
+node_modules/
+.next/
+out/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+*.tsbuildinfo
+next-env.d.ts
+
+# ---- Java / Gradle (backend) ----
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+bin/
+*.class
+
+# ---- Terraform (infra) ----
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+*.tfvars
+!*.tfvars.example
+.terraform.lock.hcl
+
+# ---- IDE ----
+.idea/
+.vscode/
+*.iml

@@ -1,0 +1,14 @@
+spring:
+  application:
+    name: rabbitrole
+  servlet:
+    multipart:
+      # Resumes are small; cap uploads so a bad file can't exhaust memory.
+      max-file-size: 5MB
+      max-request-size: 5MB
+
+server:
+  port: 8080
+
+# Phase 2 runs entirely locally with in-memory stubs — no AWS, no DB.
+# Real keys (OpenAI, Adzuna) and the RDS Data API arrive in later phases.

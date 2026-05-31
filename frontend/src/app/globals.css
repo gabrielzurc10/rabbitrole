@@ -1,0 +1,121 @@
+@import "tailwindcss";
+@import "../styles/components.css";
+
+/* Enable class-based dark mode (next-themes toggles `.dark` on <html>). */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
+ * Design tokens. Values are HSL channels ("H S% L%") so they compose with
+ * hsl() in the @theme map below and can be reused with opacity.
+ * Accent = emerald→teal; neutrals = slate.
+ */
+:root {
+  --background: 0 0% 100%;
+  --foreground: 222 47% 11%;
+
+  --card: 0 0% 100%;
+  --card-foreground: 222 47% 11%;
+
+  --muted: 210 40% 96%;
+  --muted-foreground: 215 16% 47%;
+
+  --border: 214 32% 91%;
+  --input: 214 32% 91%;
+  --ring: 160 84% 39%;
+
+  /* brand */
+  --primary: 160 84% 39%;
+  --primary-foreground: 0 0% 100%;
+  --accent: 173 80% 40%;
+  --accent-foreground: 0 0% 100%;
+
+  /* severity */
+  --critical: 0 72% 51%;
+  --warning: 38 92% 50%;
+  --optional: 199 89% 48%;
+
+  --radius: 0.75rem;
+}
+
+.dark {
+  --background: 222 47% 5%;
+  --foreground: 210 40% 98%;
+
+  --card: 222 41% 8%;
+  --card-foreground: 210 40% 98%;
+
+  --muted: 217 33% 14%;
+  --muted-foreground: 215 20% 65%;
+
+  --border: 217 33% 18%;
+  --input: 217 33% 18%;
+  --ring: 160 84% 45%;
+
+  --primary: 158 79% 45%;
+  --primary-foreground: 222 47% 7%;
+  --accent: 173 80% 46%;
+  --accent-foreground: 222 47% 7%;
+
+  --critical: 0 72% 58%;
+  --warning: 38 92% 55%;
+  --optional: 199 89% 56%;
+}
+
+/* Map tokens to Tailwind utilities (bg-background, text-primary, rounded-lg, ...). */
+@theme inline {
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-critical: hsl(var(--critical));
+  --color-warning: hsl(var(--warning));
+  --color-optional: hsl(var(--optional));
+
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@layer base {
+  * {
+    border-color: hsl(var(--border));
+  }
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    font-family: var(--font-sans), system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  /* Respect reduced-motion globally. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
