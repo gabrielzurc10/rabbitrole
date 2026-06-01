@@ -80,6 +80,9 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ inputs.aws_region }}
 
+      # docker-container builder so --provenance=false --push behaves consistently.
+      - uses: docker/setup-buildx-action@v3
+
       - uses: hashicorp/setup-terraform@v3
         with:
           terraform_wrapper: false
@@ -101,15 +104,15 @@ jobs:
 
       - name: Build + push backend image
         working-directory: ${{ inputs.tf_dir }}
+        # --provenance=false: a provenance attestation would make this a manifest
+        # list, which Lambda rejects ("media type ... not supported").
         run: |
           REPO=$(terraform output -raw ecr_repository_url)
           REGISTRY=${REPO%%/*}
           aws ecr get-login-password --region ${{ inputs.aws_region }} \
             | docker login --username AWS --password-stdin "$REGISTRY"
-          docker build --platform linux/amd64 \
-            -t "$REPO:latest" -t "$REPO:${{ github.sha }}" "$GITHUB_WORKSPACE/backend"
-          docker push "$REPO:latest"
-          docker push "$REPO:${{ github.sha }}"
+          docker buildx build --provenance=false --platform linux/amd64 \
+            -t "$REPO:latest" -t "$REPO:${{ github.sha }}" --push "$GITHUB_WORKSPACE/backend"
 
       - name: Terraform apply
         working-directory: ${{ inputs.tf_dir }}

@@ -99,14 +99,16 @@ destroy-prod:
 
 # ---- reusable recipes ------------------------------------------------------
 # $(1) = terraform env dir, $(2) = lambda function name.
-# Build the backend image, push :latest, and refresh the Lambda if it exists.
+# Build the backend image and refresh the Lambda if it exists.
+# NOTE: --provenance=false is required. Without it, buildx attaches a provenance
+# attestation, which makes the pushed artifact a manifest LIST — and Lambda only
+# accepts a single image manifest ("media type ... not supported" otherwise).
 define build_push_image
 	cd $(1) && \
 	  REPO=$$(terraform output -raw ecr_repository_url) && \
 	  REGISTRY=$${REPO%%/*} && \
 	  aws ecr get-login-password --region $(REGION) | docker login --username AWS --password-stdin $$REGISTRY && \
-	  docker build --platform linux/amd64 -t $$REPO:latest $(ROOT)/backend && \
-	  docker push $$REPO:latest && \
+	  docker buildx build --provenance=false --platform linux/amd64 -t $$REPO:latest --push $(ROOT)/backend && \
 	  ( aws lambda update-function-code --region $(REGION) --function-name $(2) --image-uri $$REPO:latest >/dev/null 2>&1 \
 	      && echo "Refreshed Lambda $(2)" \
 	      || echo "Lambda $(2) not created yet — image is in ECR, ready for 'make deploy'." )
