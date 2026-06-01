@@ -22,8 +22,19 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.boot:spring-boot-starter-validation")
 
+    // Auth: validate Cognito-issued JWTs as a resource server (aws profile);
+    // locally security is permit-all so the app runs without Cognito.
+    implementation("org.springframework.boot:spring-boot-starter-oauth2-resource-server")
+
     // Loads the repo-root .env into the Spring Environment (OpenAI/Adzuna keys).
     implementation("me.paulschwarz:spring-dotenv:4.0.0")
+
+    // AWS access (aws profile only): Aurora via the RDS Data API, S3 for resume
+    // files, SSM for secrets. Keeps Lambda out of the VPC — see CLAUDE.md.
+    implementation(platform("software.amazon.awssdk:bom:2.28.16"))
+    implementation("software.amazon.awssdk:rdsdata")
+    implementation("software.amazon.awssdk:s3")
+    implementation("software.amazon.awssdk:ssm")
 
     // Resume text extraction: PDFBox (PDF) + Apache POI (Word .docx).
     implementation("org.apache.pdfbox:pdfbox:3.0.3")

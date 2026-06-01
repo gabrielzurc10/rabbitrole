@@ -14,7 +14,7 @@ PROD     := infra/environments/prod
 
 # Source .env and re-export the three app secrets under their TF_VAR_* names.
 # Single line on purpose: make runs each recipe line in its own shell.
-TF_ENV = set -a; [ -f $(ENV_FILE) ] && . ./$(ENV_FILE); set +a; export TF_VAR_openai_api_key="$$OPENAI_API_KEY" TF_VAR_adzuna_app_id="$$ADZUNA_APP_ID" TF_VAR_adzuna_app_key="$$ADZUNA_APP_KEY" TF_VAR_budget_notify_email="$${BUDGET_NOTIFY_EMAIL:-}";
+TF_ENV = set -a; [ -f $(ENV_FILE) ] && . ./$(ENV_FILE); set +a; export TF_VAR_openai_api_key="$$OPENAI_API_KEY" TF_VAR_adzuna_app_id="$$ADZUNA_APP_ID" TF_VAR_adzuna_app_key="$$ADZUNA_APP_KEY" TF_VAR_budget_notify_email="$${BUDGET_NOTIFY_EMAIL:-}" TF_VAR_google_client_id="$${GOOGLE_CLIENT_ID:-}" TF_VAR_google_client_secret="$${GOOGLE_CLIENT_SECRET:-}";
 
 .PHONY: help \
         init-dev validate-dev plan-dev deploy-dev destroy-dev \

@@ -36,7 +36,7 @@ class AnalysisServiceTest {
         openai = mock(OpenAiClient.class);
         service = new AnalysisService(resumes, jobs, openai, new InMemoryAnalysisRepository());
 
-        when(resumes.extractedText(anyString())).thenReturn("Backend engineer resume text.");
+        when(resumes.extractedText(anyString(), anyString())).thenReturn("Backend engineer resume text.");
         when(jobs.forRole(anyString())).thenReturn(List.of(
                 new Job("1", "Backend Engineer", "Acme", "Remote", "Java, AWS", "http://x", null)));
     }
@@ -51,7 +51,7 @@ class AnalysisServiceTest {
             ]}
             """);
 
-        AnalysisResponse result = service.analyze("resume-1", "Backend Engineer");
+        AnalysisResponse result = service.analyze("resume-1", "Backend Engineer", "user-1");
 
         assertThat(result.tags()).hasSize(3);
         assertThat(result.counts().critical()).isEqualTo(1);
@@ -59,9 +59,14 @@ class AnalysisServiceTest {
         assertThat(result.counts().optional()).isEqualTo(1);
         assertThat(result.role()).isEqualTo("Backend Engineer");
 
-        // Persisted and retrievable.
-        AnalysisResponse fetched = service.get(result.id());
+        // Persisted and retrievable by its owner.
+        AnalysisResponse fetched = service.get(result.id(), "user-1");
         assertThat(fetched.id()).isEqualTo(result.id());
+
+        // A different user must not be able to read it.
+        assertThatThrownBy(() -> service.get(result.id(), "intruder"))
+                .isInstanceOf(ApiException.class)
+                .hasMessageContaining("No analysis found");
     }
 
     @Test
@@ -70,7 +75,7 @@ class AnalysisServiceTest {
         when(openai.completeJson(anyString(), anyString())).thenReturn(
                 "{\"tags\":[{\"severity\":\"CRITICAL\",\"message\":\"x\",\"reason\":\"y\",\"suggestion\":\"z\",\"location\":\"a\"}]}");
 
-        AnalysisResponse result = service.analyze("resume-1", "Backend Engineer");
+        AnalysisResponse result = service.analyze("resume-1", "Backend Engineer", "user-1");
         assertThat(result.tags()).hasSize(1);
     }
 
@@ -78,14 +83,14 @@ class AnalysisServiceTest {
     void malformedAiResponseIsRejected() {
         when(openai.completeJson(anyString(), anyString())).thenReturn("not json at all");
 
-        assertThatThrownBy(() -> service.analyze("resume-1", "Backend Engineer"))
+        assertThatThrownBy(() -> service.analyze("resume-1", "Backend Engineer", "user-1"))
                 .isInstanceOf(ApiException.class)
                 .hasMessageContaining("Could not parse AI feedback");
     }
 
     @Test
     void unknownAnalysisIdIsNotFound() {
-        assertThatThrownBy(() -> service.get("nope"))
+        assertThatThrownBy(() -> service.get("nope", "user-1"))
                 .isInstanceOf(ApiException.class)
                 .hasMessageContaining("No analysis found");
     }

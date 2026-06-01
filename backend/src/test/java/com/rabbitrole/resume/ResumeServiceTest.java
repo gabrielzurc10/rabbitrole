@@ -34,14 +34,14 @@ class ResumeServiceTest {
         MockMultipartFile file = new MockMultipartFile(
                 "file", "resume.pdf", "application/pdf", "%PDF-1.4 fake".getBytes());
 
-        ResumeResponse uploaded = service.upload(file);
+        ResumeResponse uploaded = service.upload(file, "user-1");
 
         assertThat(uploaded.id()).isNotBlank();
         assertThat(uploaded.filename()).isEqualTo("resume.pdf");
         assertThat(uploaded.textLength()).isGreaterThan(0);
         assertThat(uploaded.textPreview()).contains("Backend Engineer");
 
-        ResumeResponse fetched = service.get(uploaded.id());
+        ResumeResponse fetched = service.get(uploaded.id(), "user-1");
         assertThat(fetched.id()).isEqualTo(uploaded.id());
     }
 
@@ -50,14 +50,26 @@ class ResumeServiceTest {
         MockMultipartFile empty = new MockMultipartFile(
                 "file", "resume.pdf", "application/pdf", new byte[0]);
 
-        assertThatThrownBy(() -> service.upload(empty))
+        assertThatThrownBy(() -> service.upload(empty, "user-1"))
                 .isInstanceOf(ApiException.class)
                 .hasMessageContaining("No resume file");
     }
 
     @Test
     void unknownIdIsNotFound() {
-        assertThatThrownBy(() -> service.get("does-not-exist"))
+        assertThatThrownBy(() -> service.get("does-not-exist", "user-1"))
+                .isInstanceOf(ApiException.class)
+                .hasMessageContaining("No resume found");
+    }
+
+    @Test
+    void anotherUsersResumeIsNotFound() {
+        MockMultipartFile file = new MockMultipartFile(
+                "file", "resume.pdf", "application/pdf", "%PDF-1.4 fake".getBytes());
+        ResumeResponse uploaded = service.upload(file, "owner");
+
+        // A different user must not be able to read it — reported as not-found.
+        assertThatThrownBy(() -> service.get(uploaded.id(), "intruder"))
                 .isInstanceOf(ApiException.class)
                 .hasMessageContaining("No resume found");
     }

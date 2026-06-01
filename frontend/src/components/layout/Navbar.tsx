@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Icon } from "@/components/ui/icon";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
+import { AuthButton } from "@/components/layout/AuthButton";
 
 export function Navbar() {
   return (
@@ -20,9 +21,7 @@ export function Navbar() {
             Jobs
           </Link>
           <ThemeToggle />
-          <Link href="/login" className="btn btn-primary btn-sm">
-            Sign in
-          </Link>
+          <AuthButton />
         </nav>
       </div>
     </header>

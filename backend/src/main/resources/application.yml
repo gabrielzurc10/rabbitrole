@@ -1,6 +1,11 @@
 spring:
   application:
     name: rabbitrole
+  profiles:
+    group:
+      # dev/prod run on Lambda and need the AWS-backed beans + SSM secrets.
+      dev: aws
+      prod: aws
   servlet:
     multipart:
       # Resumes are small; cap uploads so a bad file can't exhaust memory.
@@ -26,3 +31,26 @@ adzuna:
   country: us
   # How many live postings to pull for matching + RAG grounding.
   results: 10
+
+---
+# AWS profile: activated by the dev/prod groups above. Supplies the wiring the
+# RDS Data API repos, S3 storage, and SSM secret loader need. Values come from
+# the Lambda's environment variables (infra/modules/rabbitrole/api.tf).
+spring:
+  config:
+    activate:
+      on-profile: aws
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          # Cognito user-pool issuer; the Lambda gets this from Terraform
+          # (infra/modules/rabbitrole/api.tf) once the pool exists.
+          issuer-uri: ${COGNITO_ISSUER_URI}
+aws:
+  resumes-bucket: ${RESUMES_BUCKET}
+  ssm-prefix: ${SSM_PREFIX}
+  db:
+    cluster-arn: ${DB_CLUSTER_ARN}
+    secret-arn: ${DB_SECRET_ARN}
+    name: ${DB_NAME}

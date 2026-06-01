@@ -42,3 +42,13 @@ output "cognito_client_id" {
   description = "Cognito web app client id."
   value       = aws_cognito_user_pool_client.web.id
 }
+
+output "cognito_hosted_ui_domain" {
+  description = "Hosted UI hostname the SPA redirects to for sign-in."
+  value       = local.cognito_hosted_ui_domain
+}
+
+output "cognito_issuer" {
+  description = "JWT issuer URL the backend validates Cognito tokens against."
+  value       = local.cognito_issuer
+}

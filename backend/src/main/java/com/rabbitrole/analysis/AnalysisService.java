@@ -49,8 +49,9 @@ public class AnalysisService {
         this.repository = repository;
     }
 
-    public AnalysisResponse analyze(String resumeId, String role) {
-        String resumeText = resumes.extractedText(resumeId);
+    public AnalysisResponse analyze(String resumeId, String role, String userId) {
+        // Fetching the text also enforces the caller owns the resume.
+        String resumeText = resumes.extractedText(resumeId, userId);
 
         // Flavor A grounding. Job fetching is best-effort — a postings outage
         // shouldn't block the critique, it just falls back to general advice.
@@ -62,14 +63,18 @@ public class AnalysisService {
 
         List<Tag> tags = parseTags(raw);
         Analysis saved = repository.save(new Analysis(
-                UUID.randomUUID().toString(), resumeId, role, tags, Instant.now()));
+                UUID.randomUUID().toString(), userId, resumeId, role, tags, Instant.now()));
 
         return toResponse(saved);
     }
 
-    public AnalysisResponse get(String id) {
+    public AnalysisResponse get(String id, String userId) {
         Analysis analysis = repository.findById(id)
                 .orElseThrow(() -> ApiException.notFound("No analysis found for id " + id));
+        // Mismatched owner is reported as not-found so ids never leak.
+        if (!analysis.userId().equals(userId)) {
+            throw ApiException.notFound("No analysis found for id " + id);
+        }
         return toResponse(analysis);
     }
 

@@ -1,13 +1,18 @@
 package com.rabbitrole.analysis;
 
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Repository;
 
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
-/** In-memory {@link AnalysisRepository} so the service runs without a database. */
+/**
+ * In-memory {@link AnalysisRepository} so the service runs without a database.
+ * Default for local + tests; {@link RdsDataAnalysisRepository} takes over on aws.
+ */
 @Repository
+@Profile("!aws")
 public class InMemoryAnalysisRepository implements AnalysisRepository {
 
     private final Map<String, Analysis> store = new ConcurrentHashMap<>();

@@ -26,6 +26,19 @@ variable "adzuna_app_key" {
   sensitive   = true
 }
 
+variable "google_client_id" {
+  description = "Google OAuth client id for Cognito's Google IdP. Empty disables Google sign-in."
+  type        = string
+  default     = ""
+}
+
+variable "google_client_secret" {
+  description = "Google OAuth client secret. Pass via TF_VAR (never committed)."
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
 variable "db_min_capacity" {
   description = "Aurora Serverless v2 minimum ACUs. 0 enables auto-pause to $0."
   type        = number

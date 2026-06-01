@@ -1,5 +1,6 @@
 // Single typed fetch wrapper (DRY). All backend access goes through here.
 import type { Analysis, Job, ResumeUpload, Severity, Tag } from "@/types";
+import { getAccessToken } from "@/lib/auth";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 
@@ -15,9 +16,14 @@ export class ApiError extends Error {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  // Attach the Cognito bearer token when signed in (omitted in local demo mode).
+  const token = getAccessToken();
+  const headers = new Headers(init?.headers);
+  if (token) headers.set("Authorization", `Bearer ${token}`);
+
   let res: Response;
   try {
-    res = await fetch(`${BASE_URL}${path}`, init);
+    res = await fetch(`${BASE_URL}${path}`, { ...init, headers });
   } catch {
     throw new ApiError(0, "Can't reach the server. Is the backend running?");
   }

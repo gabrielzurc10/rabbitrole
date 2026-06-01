@@ -93,6 +93,7 @@ resource "aws_lambda_function" "backend" {
       DB_NAME                = aws_rds_cluster.main.database_name
       RESUMES_BUCKET         = aws_s3_bucket.resumes.id
       SSM_PREFIX             = "/rabbitrole/${var.env}"
+      COGNITO_ISSUER_URI     = local.cognito_issuer
     }
   }
 

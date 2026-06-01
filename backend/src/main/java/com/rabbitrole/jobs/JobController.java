@@ -1,5 +1,6 @@
 package com.rabbitrole.jobs;
 
+import com.rabbitrole.common.CurrentUser;
 import com.rabbitrole.jobs.dto.Job;
 import com.rabbitrole.resume.ResumeService;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -19,10 +20,12 @@ public class JobController {
 
     private final JobService jobs;
     private final ResumeService resumes;
+    private final CurrentUser currentUser;
 
-    public JobController(JobService jobs, ResumeService resumes) {
+    public JobController(JobService jobs, ResumeService resumes, CurrentUser currentUser) {
         this.jobs = jobs;
         this.resumes = resumes;
+        this.currentUser = currentUser;
     }
 
     @GetMapping
@@ -31,7 +34,8 @@ public class JobController {
         if (resumeId == null || resumeId.isBlank()) {
             return jobs.forRole(role);
         }
-        String resumeText = resumes.extractedText(resumeId);
+        // Scoping to the caller ensures matching only reads a resume they own.
+        String resumeText = resumes.extractedText(resumeId, currentUser.id());
         return jobs.matches(role, resumeText);
     }
 }

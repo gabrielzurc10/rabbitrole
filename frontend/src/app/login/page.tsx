@@ -1,13 +1,37 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Icon } from "@/components/ui/icon";
 import { Card, CardBody } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { handleRedirectCallback, login, isConfigured } from "@/lib/auth";
 
-export default function LoginPage() {
-  const [email, setEmail] = useState("");
+function LoginCard() {
+  const router = useRouter();
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  // Returning from the Hosted UI with a ?code= — finish the token exchange.
+  useEffect(() => {
+    handleRedirectCallback()
+      .then((handled) => {
+        if (handled) router.push("/dashboard");
+      })
+      .catch((e) => setError(e instanceof Error ? e.message : "Sign-in failed."));
+  }, [router]);
+
+  async function start(provider?: string) {
+    setError(null);
+    setBusy(true);
+    try {
+      await login(provider);
+    } catch {
+      setError("Could not start sign-in. Please try again.");
+      setBusy(false);
+    }
+  }
 
   return (
     <div className="page">
@@ -22,39 +46,29 @@ export default function LoginPage() {
             </p>
 
             <div className="mt-6 space-y-2">
-              <Button variant="outline" className="w-full">
+              <Button
+                variant="outline"
+                className="w-full"
+                disabled={busy}
+                onClick={() => start("Google")}
+              >
                 <Icon name="rabbit" className="h-4 w-4" />
                 Continue with Google
               </Button>
-            </div>
-
-            <div className="my-6 flex items-center gap-3 text-xs text-muted-foreground">
-              <span className="h-px flex-1 bg-border" />
-              or
-              <span className="h-px flex-1 bg-border" />
-            </div>
-
-            <form onSubmit={(e) => e.preventDefault()} className="space-y-3">
-              <div>
-                <label htmlFor="email" className="label">
-                  Email
-                </label>
-                <input
-                  id="email"
-                  type="email"
-                  className="input"
-                  placeholder="you@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
-              </div>
-              <Button type="submit" className="w-full">
-                Send magic link
+              <Button className="w-full" disabled={busy} onClick={() => start()}>
+                <Icon name="file-text" className="h-4 w-4" />
+                Sign in with email
               </Button>
-            </form>
+            </div>
+
+            {error && (
+              <p className="mt-4 text-center text-sm text-critical">{error}</p>
+            )}
 
             <p className="mt-6 text-center text-xs text-muted-foreground">
-              Passwordless — we&apos;ll email you a one-time code.{" "}
+              {isConfigured
+                ? "Passwordless email or Google — handled securely by Cognito."
+                : "Demo mode: no sign-in configured locally."}{" "}
               <Link href="/dashboard" className="text-primary hover:underline">
                 Skip for demo
               </Link>
@@ -63,5 +77,13 @@ export default function LoginPage() {
         </Card>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginCard />
+    </Suspense>
   );
 }

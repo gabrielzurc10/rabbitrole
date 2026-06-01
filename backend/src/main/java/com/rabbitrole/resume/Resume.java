@@ -7,6 +7,7 @@ package com.rabbitrole.resume;
  */
 public record Resume(
         String id,
+        String userId,
         String filename,
         String filetype,
         String extractedText) {

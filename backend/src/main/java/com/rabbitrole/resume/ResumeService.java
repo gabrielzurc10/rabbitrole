@@ -31,7 +31,7 @@ public class ResumeService {
         this.repository = repository;
     }
 
-    public ResumeResponse upload(MultipartFile file) {
+    public ResumeResponse upload(MultipartFile file, String userId) {
         if (file == null || file.isEmpty()) {
             throw ApiException.badRequest("No resume file was provided.");
         }
@@ -50,6 +50,7 @@ public class ResumeService {
 
         Resume resume = repository.save(new Resume(
                 UUID.randomUUID().toString(),
+                userId,
                 filename,
                 contentType,
                 text));
@@ -57,18 +58,26 @@ public class ResumeService {
         return toResponse(resume);
     }
 
-    public ResumeResponse get(String id) {
-        return toResponse(require(id));
+    public ResumeResponse get(String id, String userId) {
+        return toResponse(require(id, userId));
     }
 
     /** Raw extracted text for a resume — used by analysis + job matching. */
-    public String extractedText(String id) {
-        return require(id).extractedText();
+    public String extractedText(String id, String userId) {
+        return require(id, userId).extractedText();
     }
 
-    private Resume require(String id) {
-        return repository.findById(id)
+    /**
+     * Loads a resume the caller owns. A mismatched owner is reported as
+     * not-found (not forbidden) so the API never leaks that an id exists.
+     */
+    private Resume require(String id, String userId) {
+        Resume resume = repository.findById(id)
                 .orElseThrow(() -> ApiException.notFound("No resume found for id " + id));
+        if (!resume.userId().equals(userId)) {
+            throw ApiException.notFound("No resume found for id " + id);
+        }
+        return resume;
     }
 
     private byte[] readBytes(MultipartFile file) {
