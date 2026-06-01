@@ -7,18 +7,34 @@ import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { ResumeUploader } from "@/components/ResumeUploader";
 import { RoleSelector } from "@/components/RoleSelector";
-import { ROLES } from "@/lib/mock";
+import { ROLES } from "@/lib/roles";
+import { uploadResume, analyzeResume, ApiError } from "@/lib/api";
 
 export default function DashboardPage() {
   const router = useRouter();
   const [role, setRole] = useState<string>(ROLES[1]);
   const [file, setFile] = useState<File | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  function analyze() {
+  async function analyze() {
+    if (!file) {
+      setError("Upload a resume first.");
+      return;
+    }
+    setError(null);
     setAnalyzing(true);
-    // Phase 1: mock the analysis call, then route to the results page.
-    setTimeout(() => router.push("/resume/demo"), 600);
+    try {
+      const uploaded = await uploadResume(file);
+      const analysis = await analyzeResume(uploaded.id, role);
+      // Pass the role along so the results page can link to matched jobs.
+      router.push(
+        `/resume?id=${analysis.id}&resumeId=${uploaded.id}&role=${encodeURIComponent(role)}`,
+      );
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : "Something went wrong.");
+      setAnalyzing(false);
+    }
   }
 
   return (
@@ -44,7 +60,9 @@ export default function DashboardPage() {
               <Icon name="sparkles" className="h-4 w-4" />
               {analyzing ? "Analyzing…" : "Analyze resume"}
             </Button>
-            {file ? (
+            {error ? (
+              <p className="text-center text-sm text-critical">{error}</p>
+            ) : file ? (
               <p className="text-center text-xs text-muted-foreground">
                 Ready: {file.name}
               </p>

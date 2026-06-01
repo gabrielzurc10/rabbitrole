@@ -1,17 +1,17 @@
 "use client";
 
-import { ROLES } from "@/lib/mock";
+import { ROLES } from "@/lib/roles";
 
 export function RoleSelector({
   value,
   onChange,
 }: {
   value: string;
-  onChange: (role: string) => void;
+  onChange: (value: string) => void;
 }) {
   return (
     <div>
-      <label htmlFor="role" className="label">
+      <label className="label" htmlFor="role">
         Target role
       </label>
       <select
@@ -20,9 +20,9 @@ export function RoleSelector({
         value={value}
         onChange={(e) => onChange(e.target.value)}
       >
-        {ROLES.map((role) => (
-          <option key={role} value={role}>
-            {role}
+        {ROLES.map((r) => (
+          <option key={r} value={r}>
+            {r}
           </option>
         ))}
       </select>

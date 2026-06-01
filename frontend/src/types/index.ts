@@ -1,14 +1,14 @@
-/** Shared domain types — mirror the backend DTOs. */
+// Shapes mirror the backend DTOs. Severity is normalized to lowercase in
+// `lib/api.ts` so the UI + CSS classes stay lowercase (badge-critical, …).
 
 export type Severity = "critical" | "warning" | "optional";
 
 export interface Tag {
-  id: string;
   severity: Severity;
   message: string;
   reason: string;
   suggestion: string;
-  location?: string;
+  location: string;
 }
 
 export interface TagCounts {
@@ -19,7 +19,7 @@ export interface TagCounts {
 
 export interface Analysis {
   id: string;
-  resumeName: string;
+  resumeId: string;
   role: string;
   counts: TagCounts;
   tags: Tag[];
@@ -31,7 +31,15 @@ export interface Job {
   title: string;
   company: string;
   location: string;
-  salary?: string;
+  description: string;
   url: string;
-  matchPercent: number;
+  matchPercent: number | null;
+}
+
+export interface ResumeUpload {
+  id: string;
+  filename: string;
+  filetype: string;
+  textLength: number;
+  textPreview: string;
 }

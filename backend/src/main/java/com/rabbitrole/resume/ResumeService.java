@@ -58,9 +58,17 @@ public class ResumeService {
     }
 
     public ResumeResponse get(String id) {
-        Resume resume = repository.findById(id)
+        return toResponse(require(id));
+    }
+
+    /** Raw extracted text for a resume — used by analysis + job matching. */
+    public String extractedText(String id) {
+        return require(id).extractedText();
+    }
+
+    private Resume require(String id) {
+        return repository.findById(id)
                 .orElseThrow(() -> ApiException.notFound("No resume found for id " + id));
-        return toResponse(resume);
     }
 
     private byte[] readBytes(MultipartFile file) {

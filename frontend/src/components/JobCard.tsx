@@ -1,26 +1,31 @@
-import { Icon } from "@/components/ui/icon";
+import { Job } from "@/types";
 import { MatchRing } from "@/components/MatchRing";
-import type { Job } from "@/types";
+import { Icon } from "@/components/ui/icon";
 
 export function JobCard({ job }: { job: Job }) {
   return (
-    <a
-      href={job.url}
-      className="card card-pad flex items-center gap-4 transition-colors hover:bg-muted/40"
-    >
-      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
-        <Icon name="briefcase" />
-      </div>
+    <div className="card card-pad flex items-center gap-4">
+      <MatchRing percent={job.matchPercent ?? 0} />
       <div className="min-w-0 flex-1">
-        <p className="truncate font-medium">{job.title}</p>
-        <p className="truncate text-sm text-muted-foreground">
-          {job.company} · {job.location}
+        <h3 className="truncate font-semibold">{job.title}</h3>
+        <p className="text-sm text-muted-foreground">
+          {[job.company, job.location].filter(Boolean).join(" · ")}
         </p>
-        {job.salary ? (
-          <p className="mt-0.5 text-sm text-primary">{job.salary}</p>
-        ) : null}
+        {job.description && (
+          <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
+            {job.description}
+          </p>
+        )}
       </div>
-      <MatchRing percent={job.matchPercent} />
-    </a>
+      <a
+        href={job.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="btn btn-outline btn-sm shrink-0"
+      >
+        View
+        <Icon name="arrow-right" className="h-4 w-4" />
+      </a>
+    </div>
   );
 }

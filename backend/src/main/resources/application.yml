@@ -10,5 +10,19 @@ spring:
 server:
   port: 8080
 
-# Phase 2 runs entirely locally with in-memory stubs — no AWS, no DB.
-# Real keys (OpenAI, Adzuna) and the RDS Data API arrive in later phases.
+# AI + jobs config. Keys come from .env locally (loaded by spring-dotenv via the
+# bootRun working dir = repo root) and SSM/Lambda env in prod;
+# the empty defaults let the app boot (and unit tests run) without them.
+openai:
+  api-key: ${OPENAI_API_KEY:}
+  base-url: https://api.openai.com/v1
+  chat-model: gpt-4o-mini
+  embedding-model: text-embedding-3-small
+
+adzuna:
+  app-id: ${ADZUNA_APP_ID:}
+  app-key: ${ADZUNA_APP_KEY:}
+  base-url: https://api.adzuna.com/v1/api
+  country: us
+  # How many live postings to pull for matching + RAG grounding.
+  results: 10

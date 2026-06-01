@@ -1,30 +1,24 @@
-import { Icon } from "@/components/ui/icon";
-import { SEVERITY_META, SEVERITY_ORDER } from "@/lib/severity";
-import type { TagCounts } from "@/types";
+import { TagCounts } from "@/types";
+import { SEVERITY_META } from "@/lib/severity";
 
 export function ScoreSummary({ counts }: { counts: TagCounts }) {
+  const items = [
+    { sev: "critical" as const, n: counts.critical },
+    { sev: "warning" as const, n: counts.warning },
+    { sev: "optional" as const, n: counts.optional },
+  ];
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-      {SEVERITY_ORDER.map((sev, i) => {
-        const meta = SEVERITY_META[sev];
-        return (
-          <div
-            key={sev}
-            className="card card-pad motion-safe:animate-[slide-up_0.4s_ease-out_both]"
-            style={{ animationDelay: `${i * 80}ms` }}
-          >
-            <div className="flex items-center justify-between">
-              <span className={`badge badge-${meta.badge}`}>
-                <Icon name={meta.icon} className="h-3.5 w-3.5" />
-                {meta.label}
-              </span>
-              <span className="text-3xl font-semibold tabular-nums">
-                {counts[sev]}
-              </span>
-            </div>
+    <div className="grid grid-cols-3 gap-3">
+      {items.map(({ sev, n }) => (
+        <div key={sev} className="card card-pad text-center">
+          <div className={`text-3xl font-bold ${SEVERITY_META[sev].text}`}>
+            {n}
           </div>
-        );
-      })}
+          <div className="mt-1 text-xs uppercase tracking-wide text-muted-foreground">
+            {SEVERITY_META[sev].label}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

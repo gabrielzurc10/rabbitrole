@@ -22,6 +22,9 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.boot:spring-boot-starter-validation")
 
+    // Loads the repo-root .env into the Spring Environment (OpenAI/Adzuna keys).
+    implementation("me.paulschwarz:spring-dotenv:4.0.0")
+
     // Resume text extraction: PDFBox (PDF) + Apache POI (Word .docx).
     implementation("org.apache.pdfbox:pdfbox:3.0.3")
     implementation("org.apache.poi:poi-ooxml:5.3.0")
@@ -32,4 +35,12 @@ dependencies {
 
 tasks.withType<Test> {
     useJUnitPlatform()
+}
+
+tasks.named<org.springframework.boot.gradle.tasks.run.BootRun>("bootRun") {
+    // Run from the repo root so spring-dotenv finds the root .env (its default
+    // lookup is ./.env in the working dir). Prod/Lambda use real env vars, not .env.
+    workingDir = rootProject.projectDir.parentFile
+    // Stay lenient if .env is absent (CI/prod inject real env vars instead).
+    jvmArgs("-DDOTENV_FAIL_ON_ERROR=false")
 }

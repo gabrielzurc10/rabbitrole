@@ -1,18 +1,32 @@
 import type { Severity } from "@/types";
 
-/** Presentation metadata for each severity (DRY across chips, badges, dialogs). */
+// Class names are written as literals (not `bg-${sev}`) so Tailwind's scanner
+// can see them and generate the utilities.
 export const SEVERITY_META: Record<
   Severity,
-  {
-    label: string;
-    icon: string;
-    badge: "critical" | "warning" | "optional";
-    dot: string;
-  }
+  { label: string; description: string; dot: string; text: string; badge: string }
 > = {
-  critical: { label: "Critical", icon: "alert-triangle", badge: "critical", dot: "bg-critical" },
-  warning: { label: "Warning", icon: "info", badge: "warning", dot: "bg-warning" },
-  optional: { label: "Optional", icon: "sparkles", badge: "optional", dot: "bg-optional" },
+  critical: {
+    label: "Critical",
+    description: "Fix before applying",
+    dot: "bg-critical",
+    text: "text-critical",
+    badge: "badge-critical",
+  },
+  warning: {
+    label: "Warning",
+    description: "Should improve",
+    dot: "bg-warning",
+    text: "text-warning",
+    badge: "badge-warning",
+  },
+  optional: {
+    label: "Optional",
+    description: "Nice to have",
+    dot: "bg-optional",
+    text: "text-optional",
+    badge: "badge-optional",
+  },
 };
 
 export const SEVERITY_ORDER: Severity[] = ["critical", "warning", "optional"];

@@ -1,85 +1,82 @@
 "use client";
 
 import { useState } from "react";
+import { Tag } from "@/types";
+import { SEVERITY_META, SEVERITY_ORDER } from "@/lib/severity";
 import { Icon } from "@/components/ui/icon";
 import { Dialog } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
-import { SEVERITY_META, SEVERITY_ORDER } from "@/lib/severity";
-import type { Tag } from "@/types";
 
 export function TagList({ tags }: { tags: Tag[] }) {
   const [active, setActive] = useState<Tag | null>(null);
 
   return (
     <>
-      <div className="space-y-6">
+      <div className="space-y-2">
         {SEVERITY_ORDER.map((sev) => {
           const group = tags.filter((t) => t.severity === sev);
           if (group.length === 0) return null;
-          const meta = SEVERITY_META[sev];
           return (
-            <section key={sev}>
-              <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-muted-foreground">
-                <span className={`tag-dot ${meta.dot}`} />
-                {meta.label} ({group.length})
+            <div key={sev}>
+              <h3 className="mb-2 mt-4 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                <span className={`h-2 w-2 rounded-full ${SEVERITY_META[sev].dot}`} />
+                {SEVERITY_META[sev].label} ({group.length})
               </h3>
               <div className="space-y-2">
-                {group.map((tag) => (
+                {group.map((tag, i) => (
                   <button
-                    key={tag.id}
+                    key={`${sev}-${i}`}
                     className="tag-chip"
                     onClick={() => setActive(tag)}
                   >
-                    <span className={`tag-dot ${meta.dot}`} />
+                    <span className={`tag-dot ${SEVERITY_META[tag.severity].dot}`} />
                     <span className="flex-1">
                       <span className="block text-sm font-medium">
                         {tag.message}
                       </span>
-                      {tag.location ? (
-                        <span className="mt-0.5 block font-mono text-xs text-muted-foreground">
-                          {tag.location}
-                        </span>
-                      ) : null}
+                      <span className="mt-0.5 block text-xs text-muted-foreground">
+                        {tag.location}
+                      </span>
                     </span>
                     <Icon
                       name="arrow-right"
-                      className="h-4 w-4 text-muted-foreground"
+                      className="mt-1 h-4 w-4 text-muted-foreground"
                     />
                   </button>
                 ))}
               </div>
-            </section>
+            </div>
           );
         })}
       </div>
 
-      <Dialog
-        open={active !== null}
-        onOpenChange={(o) => !o && setActive(null)}
-        title={active?.message}
-        description={active?.location}
-      >
-        {active ? (
-          <div className="space-y-4">
-            <Badge variant={SEVERITY_META[active.severity].badge}>
-              <Icon
-                name={SEVERITY_META[active.severity].icon}
-                className="h-3.5 w-3.5"
-              />
-              {SEVERITY_META[active.severity].label}
-            </Badge>
-            <div>
-              <p className="label">Why this matters</p>
-              <p className="text-sm text-muted-foreground">{active.reason}</p>
+      <Dialog open={active !== null} onClose={() => setActive(null)}>
+        {active && (
+          <div>
+            <div className="mb-3 flex items-center gap-2">
+              <span className={`badge ${SEVERITY_META[active.severity].badge}`}>
+                {SEVERITY_META[active.severity].label}
+              </span>
+              <span className="text-xs text-muted-foreground">
+                {active.location}
+              </span>
             </div>
-            <div>
-              <p className="label">Suggested replacement</p>
-              <p className="rounded-lg border border-border bg-muted/40 p-3 font-mono text-sm">
-                {active.suggestion}
-              </p>
+            <h2 className="mb-3 text-lg font-semibold">{active.message}</h2>
+            <div className="space-y-3 text-sm">
+              <div>
+                <p className="mb-1 font-medium text-muted-foreground">
+                  Why it matters
+                </p>
+                <p>{active.reason}</p>
+              </div>
+              <div>
+                <p className="mb-1 font-medium text-muted-foreground">
+                  Suggested fix
+                </p>
+                <p>{active.suggestion}</p>
+              </div>
             </div>
           </div>
-        ) : null}
+        )}
       </Dialog>
     </>
   );
