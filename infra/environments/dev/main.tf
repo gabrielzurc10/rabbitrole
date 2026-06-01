@@ -24,6 +24,10 @@ output "cloudfront_domain" {
   value = module.rabbitrole.cloudfront_domain
 }
 
+output "cloudfront_distribution_id" {
+  value = module.rabbitrole.cloudfront_distribution_id
+}
+
 output "frontend_bucket" {
   value = module.rabbitrole.frontend_bucket
 }
@@ -46,4 +50,8 @@ output "cognito_hosted_ui_domain" {
 
 output "cognito_issuer" {
   value = module.rabbitrole.cognito_issuer
+}
+
+output "resource_group" {
+  value = module.rabbitrole.resource_group
 }

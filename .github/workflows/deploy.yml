@@ -1,0 +1,144 @@
+# Reusable deploy pipeline. Builds + tests, then provisions the env, pushes the
+# backend image, applies infra, refreshes the Lambda, and ships the frontend.
+# Called by dev.yml (push to main) and prod.yml (tag v*). Self-bootstraps ECR so
+# the container Lambda's chicken-and-egg is handled on the very first run.
+#
+# Requires the remote-state bootstrap to have been applied once (see DEPLOY.md)
+# and these repo Secrets: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY,
+# OPENAI_API_KEY, ADZUNA_APP_ID, ADZUNA_APP_KEY. Optional: GOOGLE_CLIENT_ID,
+# GOOGLE_CLIENT_SECRET, BUDGET_NOTIFY_EMAIL.
+
+name: deploy
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: dev | prod
+        required: true
+        type: string
+      tf_dir:
+        description: Terraform environment directory
+        required: true
+        type: string
+      lambda_name:
+        description: Lambda function name to refresh
+        required: true
+        type: string
+      aws_region:
+        required: false
+        type: string
+        default: us-east-1
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - name: Backend build + test
+        working-directory: backend
+        run: ./gradlew --no-daemon build
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Frontend lint + build
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run lint
+          npm run build
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    # Ties into GitHub Environments so prod can require approval if configured.
+    environment: ${{ inputs.environment }}
+    env:
+      TF_VAR_openai_api_key: ${{ secrets.OPENAI_API_KEY }}
+      TF_VAR_adzuna_app_id: ${{ secrets.ADZUNA_APP_ID }}
+      TF_VAR_adzuna_app_key: ${{ secrets.ADZUNA_APP_KEY }}
+      TF_VAR_google_client_id: ${{ secrets.GOOGLE_CLIENT_ID }}
+      TF_VAR_google_client_secret: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+      TF_VAR_budget_notify_email: ${{ secrets.BUDGET_NOTIFY_EMAIL }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ inputs.aws_region }}
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Terraform init
+        working-directory: ${{ inputs.tf_dir }}
+        run: terraform init -input=false
+
+      # ECR must exist before we can push the image the Lambda needs.
+      - name: Ensure ECR repository
+        working-directory: ${{ inputs.tf_dir }}
+        run: terraform apply -input=false -auto-approve -target=module.rabbitrole.aws_ecr_repository.backend
+
+      - name: Build + push backend image
+        working-directory: ${{ inputs.tf_dir }}
+        run: |
+          REPO=$(terraform output -raw ecr_repository_url)
+          REGISTRY=${REPO%%/*}
+          aws ecr get-login-password --region ${{ inputs.aws_region }} \
+            | docker login --username AWS --password-stdin "$REGISTRY"
+          docker build --platform linux/amd64 \
+            -t "$REPO:latest" -t "$REPO:${{ github.sha }}" "$GITHUB_WORKSPACE/backend"
+          docker push "$REPO:latest"
+          docker push "$REPO:${{ github.sha }}"
+
+      - name: Terraform apply
+        working-directory: ${{ inputs.tf_dir }}
+        run: terraform apply -input=false -auto-approve
+
+      # api.tf ignores image_uri (tag is :latest), so apply won't pull the new
+      # digest — refresh the function code explicitly.
+      - name: Refresh Lambda image
+        working-directory: ${{ inputs.tf_dir }}
+        run: |
+          REPO=$(terraform output -raw ecr_repository_url)
+          aws lambda update-function-code --region ${{ inputs.aws_region }} \
+            --function-name ${{ inputs.lambda_name }} --image-uri "$REPO:latest" >/dev/null
+          aws lambda wait function-updated --region ${{ inputs.aws_region }} \
+            --function-name ${{ inputs.lambda_name }}
+
+      - name: Build + deploy frontend
+        working-directory: ${{ inputs.tf_dir }}
+        run: |
+          API=$(terraform output -raw api_url)
+          DOMAIN=$(terraform output -raw cognito_hosted_ui_domain)
+          CLIENT=$(terraform output -raw cognito_client_id)
+          BUCKET=$(terraform output -raw frontend_bucket)
+          DIST=$(terraform output -raw cloudfront_distribution_id)
+          cd "$GITHUB_WORKSPACE/frontend"
+          npm ci
+          NEXT_PUBLIC_API_URL="$API" \
+          NEXT_PUBLIC_COGNITO_DOMAIN="$DOMAIN" \
+          NEXT_PUBLIC_COGNITO_CLIENT_ID="$CLIENT" \
+            npm run build
+          aws s3 sync out/ "s3://$BUCKET/" --delete
+          aws cloudfront create-invalidation --distribution-id "$DIST" --paths '/*' >/dev/null

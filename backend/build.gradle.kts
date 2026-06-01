@@ -48,6 +48,12 @@ tasks.withType<Test> {
     useJUnitPlatform()
 }
 
+tasks.named<org.springframework.boot.gradle.tasks.bundling.BootJar>("bootJar") {
+    // Stable artifact name so the Lambda Dockerfile copies build/libs/app.jar
+    // regardless of the project version.
+    archiveFileName.set("app.jar")
+}
+
 tasks.named<org.springframework.boot.gradle.tasks.run.BootRun>("bootRun") {
     // Run from the repo root so spring-dotenv finds the root .env (its default
     // lookup is ./.env in the working dir). Prod/Lambda use real env vars, not .env.

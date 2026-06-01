@@ -1,0 +1,18 @@
+# Deploy dev on every push to main.
+name: deploy-dev
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    uses: ./.github/workflows/deploy.yml
+    with:
+      environment: dev
+      tf_dir: infra/environments/dev
+      lambda_name: rabbitrole-dev-backend
+    secrets: inherit

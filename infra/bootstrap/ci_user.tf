@@ -57,6 +57,8 @@ data "aws_iam_policy_document" "ci" {
       "budgets:*",
       "acm:*",
       "secretsmanager:*",
+      "resource-groups:*",
+      "tag:*",
     ]
     # Portfolio single-account scope. Tighten per-resource for a real org.
     resources = ["*"]

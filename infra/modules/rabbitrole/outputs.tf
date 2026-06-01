@@ -8,6 +8,11 @@ output "cloudfront_domain" {
   value       = aws_cloudfront_distribution.frontend.domain_name
 }
 
+output "cloudfront_distribution_id" {
+  description = "CloudFront distribution id (for cache invalidation on deploy)."
+  value       = aws_cloudfront_distribution.frontend.id
+}
+
 output "frontend_bucket" {
   description = "S3 bucket the built site syncs to."
   value       = aws_s3_bucket.frontend.id
@@ -51,4 +56,9 @@ output "cognito_hosted_ui_domain" {
 output "cognito_issuer" {
   description = "JWT issuer URL the backend validates Cognito tokens against."
   value       = local.cognito_issuer
+}
+
+output "resource_group" {
+  description = "Console Resource Group listing all of this env's resources."
+  value       = aws_resourcegroups_group.env.name
 }
