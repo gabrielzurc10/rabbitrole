@@ -12,4 +12,6 @@ public interface ResumeRepository {
     Resume save(Resume resume);
 
     Optional<Resume> findById(String id);
+
+    void deleteByUserId(String userId);
 }

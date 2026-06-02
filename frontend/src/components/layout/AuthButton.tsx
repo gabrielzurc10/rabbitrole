@@ -2,10 +2,11 @@
 
 import { useSyncExternalStore } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { getAccessToken, logout } from "@/lib/auth";
 
-// localStorage isn't reactive; a no-op subscription is enough since auth state
-// only changes via a full navigation (login redirect / logout).
+// localStorage isn't reactive; we re-read auth on each route change instead
+// (usePathname below), since auth state only flips alongside a navigation.
 const noopSubscribe = () => () => {};
 
 /**
@@ -14,6 +15,7 @@ const noopSubscribe = () => () => {};
  * token. In local demo mode there's never a token, so it shows "Sign in".
  */
 export function AuthButton() {
+  usePathname(); // re-evaluate auth after navigation (e.g. once signed in)
   const signedIn = useSyncExternalStore(
     noopSubscribe,
     () => getAccessToken() !== null,

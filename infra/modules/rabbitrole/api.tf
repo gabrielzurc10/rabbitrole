@@ -63,6 +63,13 @@ data "aws_iam_policy_document" "lambda_runtime" {
     actions   = ["s3:PutObject", "s3:GetObject"]
     resources = ["${aws_s3_bucket.resumes.arn}/*"]
   }
+  # Account deletion: find the user by sub, then remove them.
+  statement {
+    sid       = "CognitoDelete"
+    effect    = "Allow"
+    actions   = ["cognito-idp:ListUsers", "cognito-idp:AdminDeleteUser"]
+    resources = [aws_cognito_user_pool.main.arn]
+  }
 }
 
 resource "aws_iam_role_policy" "lambda_runtime" {
@@ -82,8 +89,10 @@ resource "aws_lambda_function" "backend" {
   package_type  = "Image"
   image_uri     = "${aws_ecr_repository.backend.repository_url}:latest"
 
-  timeout     = 30
-  memory_size = 1024
+  timeout = 30
+  # Lambda CPU scales with memory; Spring Boot cold-starts much faster at 2 GB
+  # (actual heap use is ~210 MB). The extra cost is negligible at portfolio idle.
+  memory_size = 2048
 
   environment {
     variables = {
@@ -94,6 +103,7 @@ resource "aws_lambda_function" "backend" {
       RESUMES_BUCKET         = aws_s3_bucket.resumes.id
       SSM_PREFIX             = "/rabbitrole/${var.env}"
       COGNITO_ISSUER_URI     = local.cognito_issuer
+      COGNITO_USER_POOL_ID   = aws_cognito_user_pool.main.id
     }
   }
 
@@ -106,15 +116,12 @@ resource "aws_lambda_function" "backend" {
 
 # --- API Gateway (HTTP API) ------------------------------------------------
 
+# CORS is handled by the Spring app (CorsConfig), not here — so we don't set
+# cors_configuration (which would add duplicate Access-Control-* headers).
 resource "aws_apigatewayv2_api" "http" {
   name          = "${local.name}-api"
   protocol_type = "HTTP"
-  cors_configuration {
-    allow_origins = ["https://${aws_cloudfront_distribution.frontend.domain_name}"]
-    allow_methods = ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
-    allow_headers = ["*"]
-  }
-  tags = local.tags
+  tags          = local.tags
 }
 
 resource "aws_apigatewayv2_integration" "lambda" {
@@ -124,6 +131,8 @@ resource "aws_apigatewayv2_integration" "lambda" {
   payload_format_version = "2.0"
 }
 
+# ANY so OPTIONS preflight also reaches the app — Spring Security's CorsFilter
+# answers it (the app owns CORS now).
 resource "aws_apigatewayv2_route" "proxy" {
   api_id    = aws_apigatewayv2_api.http.id
   route_key = "ANY /{proxy+}"

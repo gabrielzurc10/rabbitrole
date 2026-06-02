@@ -25,9 +25,9 @@ COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.9.1 /lambda-adapter /opt
 
 # LWA proxies to this port; matches server.port in application.yml.
 ENV PORT=8080
-# Spring Boot's startup is slow-ish; give LWA's readiness check room before the
-# first invoke. It polls the app until it responds, then forwards events.
-ENV AWS_LWA_READINESS_CHECK_PATH=/error
+# Readiness probe: LWA marks the app ready only on a 2xx/3xx, so point it at the
+# /healthz endpoint (200), NOT /error (500). It polls until ready, then forwards.
+ENV AWS_LWA_READINESS_CHECK_PATH=/healthz
 
 WORKDIR /var/task
 COPY --from=build /workspace/build/libs/app.jar app.jar

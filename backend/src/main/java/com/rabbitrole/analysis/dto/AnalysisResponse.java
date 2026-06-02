@@ -8,6 +8,7 @@ public record AnalysisResponse(
         String id,
         String resumeId,
         String role,
+        int score,
         TagCounts counts,
         List<Tag> tags,
         Instant createdAt) {

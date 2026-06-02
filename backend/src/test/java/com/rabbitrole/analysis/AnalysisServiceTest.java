@@ -44,7 +44,7 @@ class AnalysisServiceTest {
     @Test
     void analyzeParsesTagsCountsAndPersists() {
         when(openai.completeJson(anyString(), anyString())).thenReturn("""
-            {"tags":[
+            {"score":74,"tags":[
               {"severity":"critical","message":"No metrics","reason":"Postings want impact","suggestion":"Add numbers","location":"Experience"},
               {"severity":"warning","message":"Too long","reason":"2 pages","suggestion":"Trim","location":"Overall"},
               {"severity":"optional","message":"Add portfolio","reason":"Nice to have","suggestion":"Link GitHub","location":"Header"}
@@ -58,6 +58,7 @@ class AnalysisServiceTest {
         assertThat(result.counts().warning()).isEqualTo(1);
         assertThat(result.counts().optional()).isEqualTo(1);
         assertThat(result.role()).isEqualTo("Backend Engineer");
+        assertThat(result.score()).isEqualTo(74); // model-provided score is used
 
         // Persisted and retrievable by its owner.
         AnalysisResponse fetched = service.get(result.id(), "user-1");
@@ -77,6 +78,20 @@ class AnalysisServiceTest {
 
         AnalysisResponse result = service.analyze("resume-1", "Backend Engineer", "user-1");
         assertThat(result.tags()).hasSize(1);
+    }
+
+    @Test
+    void omittedScoreFallsBackToDerivedScore() {
+        // No "score" field → derive from tag mix: 100 - 18(crit) - 7(warn) = 75.
+        when(openai.completeJson(anyString(), anyString())).thenReturn("""
+            {"tags":[
+              {"severity":"critical","message":"x","reason":"y","suggestion":"z","location":"a"},
+              {"severity":"warning","message":"x","reason":"y","suggestion":"z","location":"a"}
+            ]}
+            """);
+
+        AnalysisResponse result = service.analyze("resume-1", "Backend Engineer", "user-1");
+        assertThat(result.score()).isEqualTo(75);
     }
 
     @Test

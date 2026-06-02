@@ -1,8 +1,7 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Icon } from "@/components/ui/icon";
 import { Card, CardBody } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,27 +9,62 @@ import { handleRedirectCallback, login, isConfigured } from "@/lib/auth";
 
 function LoginCard() {
   const router = useRouter();
+  const params = useSearchParams();
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const handled = useRef(false);
+
+  // While exchanging the Hosted UI ?code=, show a spinner instead of the form
+  // so the sign-in card doesn't flash before we redirect onward.
+  const exchanging = params.has("code") && !error;
+
+  // Land on the Jobs tab after sign-in; that page sends users who haven't
+  // onboarded yet to the wizard, so it stays robust even if the API is cold.
+  const proceed = useCallback(() => {
+    router.replace("/jobs");
+  }, [router]);
 
   // Returning from the Hosted UI with a ?code= — finish the token exchange.
   useEffect(() => {
+    if (handled.current) return; // guard against a double effect run
+    handled.current = true;
     handleRedirectCallback()
-      .then((handled) => {
-        if (handled) router.push("/dashboard");
+      .then((done) => {
+        if (done) proceed();
       })
-      .catch((e) => setError(e instanceof Error ? e.message : "Sign-in failed."));
-  }, [router]);
+      .catch((e) => {
+        handled.current = false;
+        setError(e instanceof Error ? e.message : "Sign-in failed.");
+      });
+  }, [proceed]);
 
-  async function start(provider?: string) {
+  function start(provider?: string) {
     setError(null);
     setBusy(true);
     try {
-      await login(provider);
+      // Demo mode has no real OAuth — go straight in.
+      if (isConfigured) {
+        void login(provider);
+      } else {
+        proceed();
+      }
     } catch {
       setError("Could not start sign-in. Please try again.");
       setBusy(false);
     }
+  }
+
+  if (exchanging) {
+    return (
+      <div className="page">
+        <div className="mx-auto flex min-h-[40vh] max-w-md flex-col items-center justify-center text-center">
+          <div className="relative flex h-16 w-16 items-center justify-center">
+            <span className="absolute inset-0 rounded-full border-4 border-muted border-t-primary motion-safe:animate-spin" />
+          </div>
+          <p className="mt-4 text-sm text-muted-foreground">Signing you in…</p>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -69,9 +103,13 @@ function LoginCard() {
               {isConfigured
                 ? "Passwordless email or Google — handled securely by Cognito."
                 : "Demo mode: no sign-in configured locally."}{" "}
-              <Link href="/dashboard" className="text-primary hover:underline">
+              <button
+                type="button"
+                className="text-primary hover:underline"
+                onClick={() => proceed()}
+              >
                 Skip for demo
-              </Link>
+              </button>
             </p>
           </CardBody>
         </Card>

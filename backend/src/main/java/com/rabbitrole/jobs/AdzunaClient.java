@@ -47,10 +47,21 @@ public class AdzunaClient {
                 .build();
     }
 
-    /** Searches postings for a role; match scores are filled in later. */
-    @SuppressWarnings("unchecked")
+    /** Searches postings for a role (no location filter); scores filled in later. */
     public List<Job> search(String role) {
-        Map<String, Object> response = fetchWithRetry(role);
+        return search(role, null, null, false);
+    }
+
+    /**
+     * Searches postings for a role, optionally near a location and/or remote.
+     * {@code where} is a "City, State" string; {@code distanceMiles} maps to
+     * Adzuna's {@code distance} param (which is in KM, so we convert). Adzuna has
+     * no first-class remote flag, so {@code remoteOnly} just biases the query
+     * term with "remote" — best-effort.
+     */
+    @SuppressWarnings("unchecked")
+    public List<Job> search(String role, String where, Integer distanceMiles, boolean remoteOnly) {
+        Map<String, Object> response = fetchWithRetry(role, where, distanceMiles, remoteOnly);
         if (response == null || response.get("results") == null) {
             return List.of();
         }
@@ -58,18 +69,29 @@ public class AdzunaClient {
         return raw.stream().map(this::toJob).toList();
     }
 
-    private Map<String, Object> fetchWithRetry(String role) {
+    private Map<String, Object> fetchWithRetry(String role, String where, Integer distanceMiles, boolean remoteOnly) {
+        String what = remoteOnly ? role + " remote" : role;
+        String whereParam = (where == null || where.isBlank()) ? null : where;
+        Integer distanceKm = distanceMiles == null ? null : (int) Math.round(distanceMiles * 1.60934);
+
         RuntimeException last = null;
         for (int attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
             try {
                 return http.get()
-                        .uri(uriBuilder -> uriBuilder
-                                .path("/jobs/{country}/search/1")
-                                .queryParam("app_id", appId)
-                                .queryParam("app_key", appKey)
-                                .queryParam("what", role)
-                                .queryParam("results_per_page", results)
-                                .build(country))
+                        .uri(uriBuilder -> {
+                            uriBuilder.path("/jobs/{country}/search/1")
+                                    .queryParam("app_id", appId)
+                                    .queryParam("app_key", appKey)
+                                    .queryParam("what", what)
+                                    .queryParam("results_per_page", results);
+                            if (whereParam != null) {
+                                uriBuilder.queryParam("where", whereParam);
+                            }
+                            if (distanceKm != null) {
+                                uriBuilder.queryParam("distance", distanceKm);
+                            }
+                            return uriBuilder.build(country);
+                        })
                         .retrieve()
                         .body(Map.class);
             } catch (HttpServerErrorException e) {

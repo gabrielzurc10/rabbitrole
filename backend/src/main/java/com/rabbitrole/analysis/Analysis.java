@@ -12,5 +12,6 @@ public record Analysis(
         String resumeId,
         String role,
         List<Tag> tags,
+        int score,
         Instant createdAt) {
 }

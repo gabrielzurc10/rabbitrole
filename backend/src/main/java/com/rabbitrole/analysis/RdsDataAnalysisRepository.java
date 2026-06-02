@@ -34,16 +34,18 @@ public class RdsDataAnalysisRepository implements AnalysisRepository {
     @Override
     public Analysis save(Analysis analysis) {
         db.execute("""
-                        INSERT INTO analyses (id, user_id, resume_id, role, tags, created_at)
-                        VALUES (:id, :userId, :resumeId, :role, :tags, :createdAt)
+                        INSERT INTO analyses (id, user_id, resume_id, role, tags, score, created_at)
+                        VALUES (:id, :userId, :resumeId, :role, :tags, :score, :createdAt)
                         ON CONFLICT (id) DO UPDATE SET
                             role = EXCLUDED.role,
-                            tags = EXCLUDED.tags""",
+                            tags = EXCLUDED.tags,
+                            score = EXCLUDED.score""",
                 DataApi.str("id", analysis.id()),
                 DataApi.str("userId", analysis.userId()),
                 DataApi.str("resumeId", analysis.resumeId()),
                 DataApi.str("role", analysis.role()),
                 DataApi.json("tags", writeTags(analysis.tags())),
+                DataApi.integer("score", analysis.score()),
                 DataApi.timestamp("createdAt", analysis.createdAt()));
         return analysis;
     }
@@ -51,7 +53,7 @@ public class RdsDataAnalysisRepository implements AnalysisRepository {
     @Override
     public Optional<Analysis> findById(String id) {
         ExecuteStatementResponse response = db.execute("""
-                        SELECT id, user_id, resume_id, role, tags, created_at
+                        SELECT id, user_id, resume_id, role, tags, score, created_at
                         FROM analyses WHERE id = :id""",
                 DataApi.str("id", id));
 
@@ -60,13 +62,21 @@ public class RdsDataAnalysisRepository implements AnalysisRepository {
             return Optional.empty();
         }
         List<Field> row = rows.get(0);
+        Integer score = DataApi.integerValue(row, 5);
         return Optional.of(new Analysis(
                 DataApi.string(row, 0),
                 DataApi.string(row, 1),
                 DataApi.string(row, 2),
                 DataApi.string(row, 3),
                 readTags(DataApi.string(row, 4)),
-                DataApi.instant(DataApi.string(row, 5))));
+                score == null ? 0 : score,
+                DataApi.instant(DataApi.string(row, 6))));
+    }
+
+    @Override
+    public void deleteByUserId(String userId) {
+        db.execute("DELETE FROM analyses WHERE user_id = :userId",
+                DataApi.str("userId", userId));
     }
 
     private String writeTags(List<Tag> tags) {

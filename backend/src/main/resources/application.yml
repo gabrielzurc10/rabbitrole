@@ -54,3 +54,5 @@ aws:
     cluster-arn: ${DB_CLUSTER_ARN}
     secret-arn: ${DB_SECRET_ARN}
     name: ${DB_NAME}
+  cognito:
+    user-pool-id: ${COGNITO_USER_POOL_ID}

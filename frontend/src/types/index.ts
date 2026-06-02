@@ -21,9 +21,29 @@ export interface Analysis {
   id: string;
   resumeId: string;
   role: string;
+  score: number;
   counts: TagCounts;
   tags: Tag[];
   createdAt: string;
+}
+
+/** Where the user wants to work. Backend enum is IN_PERSON/HYBRID/REMOTE. */
+export type WorkMode = "in-person" | "hybrid" | "remote";
+
+export interface CityPreference {
+  city: string;
+  state: string;
+  distanceMiles: number;
+}
+
+export interface Profile {
+  fullName: string;
+  targetRoles: string[];
+  workMode: WorkMode;
+  cities: CityPreference[];
+  resumeId?: string;
+  analysisId?: string;
+  score?: number;
 }
 
 export interface Job {

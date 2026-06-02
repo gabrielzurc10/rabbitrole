@@ -5,6 +5,7 @@
 // Offline-friendly: when the Cognito env vars are absent (local `npm run dev`),
 // auth runs in "demo mode" — login just routes into the app and no bearer token
 // is sent, which pairs with the backend's local permit-all security.
+import { setOnboarded } from "@/lib/session";
 
 const DOMAIN = process.env.NEXT_PUBLIC_COGNITO_DOMAIN ?? "";
 const CLIENT_ID = process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID ?? "";
@@ -47,7 +48,7 @@ async function challengeFor(verifier: string): Promise<string> {
 /** Start sign-in. `provider` ("Google") jumps straight to that IdP. */
 export async function login(provider?: string): Promise<void> {
   if (!isConfigured) {
-    window.location.assign("/dashboard");
+    window.location.assign("/onboarding");
     return;
   }
   const verifier = randomString();
@@ -118,6 +119,7 @@ export function isAuthenticated(): boolean {
 export function logout(): void {
   localStorage.removeItem(ACCESS_TOKEN_KEY);
   localStorage.removeItem(EXPIRES_AT_KEY);
+  setOnboarded(false); // hide the Jobs/Profile tabs
   if (!isConfigured) {
     window.location.assign("/");
     return;

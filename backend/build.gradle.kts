@@ -35,6 +35,8 @@ dependencies {
     implementation("software.amazon.awssdk:rdsdata")
     implementation("software.amazon.awssdk:s3")
     implementation("software.amazon.awssdk:ssm")
+    // Account deletion removes the Cognito user (AdminDeleteUser).
+    implementation("software.amazon.awssdk:cognitoidentityprovider")
 
     // Resume text extraction: PDFBox (PDF) + Apache POI (Word .docx).
     implementation("org.apache.pdfbox:pdfbox:3.0.3")

@@ -27,4 +27,9 @@ public class InMemoryResumeRepository implements ResumeRepository {
     public Optional<Resume> findById(String id) {
         return Optional.ofNullable(store.get(id));
     }
+
+    @Override
+    public void deleteByUserId(String userId) {
+        store.values().removeIf(r -> userId.equals(r.userId()));
+    }
 }

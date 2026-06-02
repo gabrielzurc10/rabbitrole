@@ -61,9 +61,11 @@ public class AnalysisService {
                 AnalysisPrompt.system(),
                 AnalysisPrompt.user(role, resumeText, grounding));
 
-        List<Tag> tags = parseTags(raw);
+        AnalysisEnvelope envelope = parseEnvelope(raw);
+        List<Tag> tags = envelope.tags();
+        int score = resolveScore(envelope.score(), tags);
         Analysis saved = repository.save(new Analysis(
-                UUID.randomUUID().toString(), userId, resumeId, role, tags, Instant.now()));
+                UUID.randomUUID().toString(), userId, resumeId, role, tags, score, Instant.now()));
 
         return toResponse(saved);
     }
@@ -86,13 +88,13 @@ public class AnalysisService {
         }
     }
 
-    private List<Tag> parseTags(String raw) {
+    private AnalysisEnvelope parseEnvelope(String raw) {
         try {
-            TagEnvelope envelope = json.readValue(raw, TagEnvelope.class);
+            AnalysisEnvelope envelope = json.readValue(raw, AnalysisEnvelope.class);
             if (envelope == null || envelope.tags() == null || envelope.tags().isEmpty()) {
                 throw new ApiException(HttpStatus.BAD_GATEWAY, "AI returned no feedback tags.");
             }
-            return envelope.tags();
+            return envelope;
         } catch (ApiException e) {
             throw e;
         } catch (Exception e) {
@@ -101,13 +103,26 @@ public class AnalysisService {
         }
     }
 
+    /**
+     * Trust the model's 0-100 score when it's valid; otherwise derive one from
+     * the tag mix so a response always carries a sensible number.
+     */
+    private int resolveScore(Integer aiScore, List<Tag> tags) {
+        if (aiScore != null && aiScore >= 0 && aiScore <= 100) {
+            return aiScore;
+        }
+        TagCounts counts = TagCounts.from(tags);
+        int derived = 100 - (18 * counts.critical()) - (7 * counts.warning()) - (2 * counts.optional());
+        return Math.max(0, Math.min(100, derived));
+    }
+
     private AnalysisResponse toResponse(Analysis a) {
         return new AnalysisResponse(
-                a.id(), a.resumeId(), a.role(),
+                a.id(), a.resumeId(), a.role(), a.score(),
                 TagCounts.from(a.tags()), a.tags(), a.createdAt());
     }
 
-    /** Matches the {"tags":[...]} shape the model is told to return. */
-    private record TagEnvelope(List<Tag> tags) {
+    /** Matches the {"score":..,"tags":[...]} shape the model is told to return. */
+    private record AnalysisEnvelope(Integer score, List<Tag> tags) {
     }
 }

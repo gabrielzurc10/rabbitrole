@@ -138,4 +138,63 @@
   .match-ring-value {
     @apply text-primary transition-[stroke-dashoffset] duration-700 ease-out;
   }
+
+  /* ---------- stepper ---------- */
+  .stepper {
+    @apply flex items-center;
+  }
+  .stepper-dot {
+    @apply flex h-8 w-8 shrink-0 items-center justify-center rounded-full border
+      text-xs font-semibold transition-colors;
+  }
+  .stepper-dot-active {
+    @apply border-primary bg-primary text-primary-foreground;
+  }
+  .stepper-dot-done {
+    @apply border-primary bg-primary/10 text-primary;
+  }
+  .stepper-dot-todo {
+    @apply border-border text-muted-foreground;
+  }
+  .stepper-connector {
+    @apply mx-1.5 h-px flex-1 bg-border;
+  }
+  .stepper-connector-done {
+    @apply bg-primary;
+  }
+
+  /* ---------- segmented control (work mode) ---------- */
+  .segmented {
+    @apply grid grid-cols-3 gap-2;
+  }
+  .segment {
+    @apply flex flex-col items-center justify-center gap-1.5 rounded-lg border
+      border-border bg-background px-3 py-4 text-sm font-medium
+      transition-colors hover:bg-muted
+      focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring;
+  }
+  .segment-active {
+    @apply border-primary bg-primary/10 text-primary hover:bg-primary/10;
+  }
+
+  /* ---------- chip input (roles) ---------- */
+  .chip-input {
+    @apply flex flex-wrap items-center gap-2;
+  }
+  .chip {
+    @apply inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1
+      text-sm font-medium;
+  }
+  .chip-primary {
+    @apply bg-primary/10 text-primary;
+  }
+  .chip-remove {
+    @apply text-muted-foreground transition-colors hover:text-foreground;
+  }
+
+  /* ---------- city/proximity rows ---------- */
+  .city-row {
+    @apply flex flex-wrap items-end gap-2 rounded-lg border border-border
+      bg-muted/30 p-3;
+  }
 }

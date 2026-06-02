@@ -11,11 +11,16 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public class AwsProperties {
 
     private final Db db = new Db();
+    private final Cognito cognito = new Cognito();
     private String resumesBucket;
     private String ssmPrefix;
 
     public Db getDb() {
         return db;
+    }
+
+    public Cognito getCognito() {
+        return cognito;
     }
 
     public String getResumesBucket() {
@@ -62,6 +67,19 @@ public class AwsProperties {
 
         public void setName(String name) {
             this.name = name;
+        }
+    }
+
+    /** Cognito coordinates needed to delete a user on account deletion. */
+    public static class Cognito {
+        private String userPoolId;
+
+        public String getUserPoolId() {
+            return userPoolId;
+        }
+
+        public void setUserPoolId(String userPoolId) {
+            this.userPoolId = userPoolId;
         }
     }
 }

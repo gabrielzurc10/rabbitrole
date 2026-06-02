@@ -24,7 +24,9 @@ final class AnalysisPrompt {
         return """
             You are an expert technical resume reviewer. Critique the resume for the
             target role, grounded in the real job postings provided. Return STRICT JSON:
-            {"tags":[{"severity","message","reason","suggestion","location"}]}
+            {"score": <int 0-100>, "tags":[{"severity","message","reason","suggestion","location"}]}
+            - score: a holistic 0-100 rating of how well this resume fits THIS role
+              given the postings (100 = exceptional, 0 = no fit). Be discerning.
             - severity is one of: CRITICAL, WARNING, OPTIONAL.
             - CRITICAL: likely to get the resume rejected. WARNING: notably weakens it.
               OPTIONAL: nice-to-have polish.

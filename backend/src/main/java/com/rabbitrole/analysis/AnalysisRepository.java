@@ -8,4 +8,6 @@ public interface AnalysisRepository {
     Analysis save(Analysis analysis);
 
     Optional<Analysis> findById(String id);
+
+    void deleteByUserId(String userId);
 }

@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { Icon } from "@/components/ui/icon";
 import { ScoreSummary } from "@/components/ScoreSummary";
 import { TagList } from "@/components/TagList";
+import { MatchRing } from "@/components/MatchRing";
 import { getAnalysis, ApiError } from "@/lib/api";
 import type { Analysis } from "@/types";
 
@@ -34,8 +35,8 @@ function ResumeResult() {
           <p className="text-critical">
             {error ?? "No analysis id provided."}
           </p>
-          <Link href="/dashboard" className="btn btn-outline mt-4">
-            Back to upload
+          <Link href="/profile" className="btn btn-outline mt-4">
+            Back to profile
           </Link>
         </div>
       </div>
@@ -58,15 +59,18 @@ function ResumeResult() {
     <div className="page">
       <div className="mx-auto max-w-3xl">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
-              <Icon name="file-text" className="text-primary" />
-              Resume review
-            </h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Reviewed for{" "}
-              <span className="font-medium text-foreground">{analysis.role}</span>
-            </p>
+          <div className="flex items-center gap-4">
+            <MatchRing percent={analysis.score} size={72} />
+            <div>
+              <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
+                <Icon name="file-text" className="text-primary" />
+                Resume review
+              </h1>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Reviewed for{" "}
+                <span className="font-medium text-foreground">{analysis.role}</span>
+              </p>
+            </div>
           </div>
           <Link href={jobsHref} className="btn btn-outline btn-sm">
             <Icon name="briefcase" className="h-4 w-4" />

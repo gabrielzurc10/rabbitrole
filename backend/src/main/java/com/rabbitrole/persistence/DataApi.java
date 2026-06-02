@@ -6,6 +6,7 @@ import org.springframework.stereotype.Component;
 import software.amazon.awssdk.services.rdsdata.RdsDataClient;
 import software.amazon.awssdk.services.rdsdata.model.ExecuteStatementResponse;
 import software.amazon.awssdk.services.rdsdata.model.Field;
+import software.amazon.awssdk.services.rdsdata.model.RdsDataException;
 import software.amazon.awssdk.services.rdsdata.model.SqlParameter;
 import software.amazon.awssdk.services.rdsdata.model.TypeHint;
 
@@ -35,6 +36,12 @@ public class DataApi {
             .optionalStart().appendFraction(ChronoField.NANO_OF_SECOND, 0, 9, true).optionalEnd()
             .toFormatter();
 
+    // Aurora min=0 auto-pauses; the first Data API call then 400s with "resuming
+    // after being auto-paused". Retry with backoff so calls wait for the cluster
+    // to wake (~10-20s) instead of failing the request — or crashing startup.
+    private static final int MAX_ATTEMPTS = 12;
+    private static final long RETRY_BACKOFF_MS = 1800;
+
     private final RdsDataClient client;
     private final AwsProperties props;
 
@@ -44,12 +51,38 @@ public class DataApi {
     }
 
     public ExecuteStatementResponse execute(String sql, SqlParameter... params) {
-        return client.executeStatement(b -> b
-                .resourceArn(props.getDb().getClusterArn())
-                .secretArn(props.getDb().getSecretArn())
-                .database(props.getDb().getName())
-                .sql(sql)
-                .parameters(params));
+        RdsDataException last = null;
+        for (int attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+            try {
+                return client.executeStatement(b -> b
+                        .resourceArn(props.getDb().getClusterArn())
+                        .secretArn(props.getDb().getSecretArn())
+                        .database(props.getDb().getName())
+                        .sql(sql)
+                        .parameters(params));
+            } catch (RdsDataException e) {
+                if (!isResuming(e) || attempt == MAX_ATTEMPTS) {
+                    throw e;
+                }
+                last = e;
+                sleepQuietly(RETRY_BACKOFF_MS);
+            }
+        }
+        throw last; // unreachable
+    }
+
+    /** True for the transient "cluster is resuming from auto-pause" 400. */
+    private static boolean isResuming(RdsDataException e) {
+        String msg = e.getMessage();
+        return msg != null && (msg.contains("resuming") || msg.contains("auto-pause"));
+    }
+
+    private static void sleepQuietly(long ms) {
+        try {
+            Thread.sleep(ms);
+        } catch (InterruptedException ie) {
+            Thread.currentThread().interrupt();
+        }
     }
 
     // --- parameter builders ---
@@ -71,6 +104,14 @@ public class DataApi {
                 .build();
     }
 
+    /** A nullable integer parameter. */
+    public static SqlParameter integer(String name, Integer value) {
+        Field field = value == null
+                ? Field.builder().isNull(true).build()
+                : Field.builder().longValue(value.longValue()).build();
+        return SqlParameter.builder().name(name).value(field).build();
+    }
+
     /** A timestamptz parameter from an Instant (rendered as UTC). */
     public static SqlParameter timestamp(String name, Instant value) {
         return SqlParameter.builder()
@@ -86,6 +127,16 @@ public class DataApi {
     public static String string(List<Field> row, int index) {
         Field field = row.get(index);
         return Boolean.TRUE.equals(field.isNull()) ? null : field.stringValue();
+    }
+
+    /** Reads a (possibly null) integer column from a result row. */
+    public static Integer integerValue(List<Field> row, int index) {
+        Field field = row.get(index);
+        if (Boolean.TRUE.equals(field.isNull())) {
+            return null;
+        }
+        Long value = field.longValue();
+        return value == null ? null : value.intValue();
     }
 
     /** Parses a Data API timestamptz string back into an Instant (UTC). */

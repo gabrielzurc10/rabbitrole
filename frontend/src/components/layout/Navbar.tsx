@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Icon } from "@/components/ui/icon";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { AuthButton } from "@/components/layout/AuthButton";
+import { NavTabs } from "@/components/layout/NavTabs";
 
 export function Navbar() {
   return (
@@ -14,12 +15,7 @@ export function Navbar() {
           </span>
         </Link>
         <nav className="flex items-center gap-1">
-          <Link href="/dashboard" className="btn btn-ghost btn-sm">
-            Dashboard
-          </Link>
-          <Link href="/jobs" className="btn btn-ghost btn-sm">
-            Jobs
-          </Link>
+          <NavTabs />
           <ThemeToggle />
           <AuthButton />
         </nav>

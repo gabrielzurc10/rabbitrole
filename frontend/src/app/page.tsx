@@ -1,6 +1,6 @@
-import Link from "next/link";
 import { Icon } from "@/components/ui/icon";
 import { Card, CardBody, CardTitle, CardSubtitle } from "@/components/ui/card";
+import { HeroCta } from "@/components/HeroCta";
 
 const STEPS = [
   {
@@ -37,15 +37,8 @@ export default function Home() {
           Upload your resume, pick a target role, and get specific, severity-ranked
           feedback — then see the live jobs you actually match.
         </p>
-        <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-          <Link href="/dashboard" className="btn btn-primary btn-lg">
-            Analyze my resume
-            <Icon name="arrow-right" className="h-4 w-4" />
-          </Link>
-          <Link href="/jobs" className="btn btn-outline btn-lg">
-            <Icon name="briefcase" className="h-4 w-4" />
-            Browse matched jobs
-          </Link>
+        <div className="mt-8 flex justify-center">
+          <HeroCta />
         </div>
       </section>
 

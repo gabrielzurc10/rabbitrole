@@ -58,4 +58,10 @@ public class RdsDataResumeRepository implements ResumeRepository {
                 DataApi.string(row, 3),
                 DataApi.string(row, 4)));
     }
+
+    @Override
+    public void deleteByUserId(String userId) {
+        db.execute("DELETE FROM resumes WHERE user_id = :userId",
+                DataApi.str("userId", userId));
+    }
 }
