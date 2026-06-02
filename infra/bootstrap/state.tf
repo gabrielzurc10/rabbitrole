@@ -1,8 +1,16 @@
 # Remote-state backend resources: an S3 bucket (versioned, encrypted, private)
 # plus a DynamoDB lock table. Persistent — excluded from per-env destroy.
 
+# Name the state bucket from the caller's account id so the repo isn't tied to
+# any one AWS account — clone, `make bootstrap`, deploy, all account-agnostic.
+data "aws_caller_identity" "current" {}
+
+locals {
+  state_bucket = "rabbitrole-tfstate-${data.aws_caller_identity.current.account_id}"
+}
+
 resource "aws_s3_bucket" "state" {
-  bucket = var.state_bucket_name
+  bucket = local.state_bucket
 
   # Guard against `terraform destroy` nuking state history by accident.
   lifecycle {

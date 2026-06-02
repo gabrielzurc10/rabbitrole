@@ -1,5 +1,0 @@
-# Copy to terraform.tfvars (gitignored) OR export as TF_VAR_* env vars.
-openai_api_key      = ""
-adzuna_app_id       = ""
-adzuna_app_key      = ""
-budget_notify_email = ""

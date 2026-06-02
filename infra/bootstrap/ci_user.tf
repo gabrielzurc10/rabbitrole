@@ -54,7 +54,6 @@ data "aws_iam_policy_document" "ci" {
       "iam:*",
       "ec2:*",
       "logs:*",
-      "budgets:*",
       "acm:*",
       "secretsmanager:*",
       "resource-groups:*",

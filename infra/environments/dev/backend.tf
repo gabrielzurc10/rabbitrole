@@ -6,9 +6,10 @@ terraform {
       version = "~> 5.0"
     }
   }
-  # Remote state in the bootstrap-created bucket; one state key per env.
+  # Remote state in the bootstrap-created bucket; one state key per env. The
+  # bucket name is account-specific, so it's supplied at init time via
+  # -backend-config (see the Makefile) rather than hardcoded here.
   backend "s3" {
-    bucket         = "rabbitrole-tfstate-275452507302"
     key            = "dev/terraform.tfstate"
     region         = "us-east-1"
     dynamodb_table = "rabbitrole-tflock"

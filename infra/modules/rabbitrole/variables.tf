@@ -1,5 +1,5 @@
 variable "env" {
-  description = "Environment name (dev|prod). Prefixes all resource names."
+  description = "Deployment name. Prefixes all resource names."
   type        = string
 }
 
@@ -49,18 +49,6 @@ variable "db_max_capacity" {
   description = "Aurora Serverless v2 maximum ACUs."
   type        = number
   default     = 1
-}
-
-variable "budget_limit_usd" {
-  description = "Monthly budget alarm threshold."
-  type        = number
-  default     = 10
-}
-
-variable "budget_notify_email" {
-  description = "Email for the budget alarm. Empty disables the budget."
-  type        = string
-  default     = ""
 }
 
 locals {

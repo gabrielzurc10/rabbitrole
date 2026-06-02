@@ -1,37 +1,25 @@
-# Reusable deploy pipeline. Builds + tests, then provisions the env, pushes the
-# backend image, applies infra, refreshes the Lambda, and ships the frontend.
-# Called by dev.yml (push to main) and prod.yml (tag v*). Self-bootstraps ECR so
-# the container Lambda's chicken-and-egg is handled on the very first run.
+# Deploy on push to main: build + test, provision, push the backend image, apply
+# infra, refresh the Lambda, and ship the frontend. Self-bootstraps ECR so the
+# container Lambda's chicken-and-egg is handled on the first run.
 #
 # Requires the remote-state bootstrap to have been applied once (see DEPLOY.md)
 # and these repo Secrets: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY,
 # OPENAI_API_KEY, ADZUNA_APP_ID, ADZUNA_APP_KEY. Optional: GOOGLE_CLIENT_ID,
-# GOOGLE_CLIENT_SECRET, BUDGET_NOTIFY_EMAIL.
+# GOOGLE_CLIENT_SECRET.
 
 name: deploy
 
 on:
-  workflow_call:
-    inputs:
-      environment:
-        description: dev | prod
-        required: true
-        type: string
-      tf_dir:
-        description: Terraform environment directory
-        required: true
-        type: string
-      lambda_name:
-        description: Lambda function name to refresh
-        required: true
-        type: string
-      aws_region:
-        required: false
-        type: string
-        default: us-east-1
+  push:
+    branches: [main]
 
 permissions:
   contents: read
+
+env:
+  AWS_REGION: us-east-1
+  TF_DIR: infra/environments/dev
+  LAMBDA: rabbitrole-dev-backend
 
 jobs:
   test:
@@ -62,15 +50,12 @@ jobs:
   deploy:
     needs: test
     runs-on: ubuntu-latest
-    # Ties into GitHub Environments so prod can require approval if configured.
-    environment: ${{ inputs.environment }}
     env:
       TF_VAR_openai_api_key: ${{ secrets.OPENAI_API_KEY }}
       TF_VAR_adzuna_app_id: ${{ secrets.ADZUNA_APP_ID }}
       TF_VAR_adzuna_app_key: ${{ secrets.ADZUNA_APP_KEY }}
       TF_VAR_google_client_id: ${{ secrets.GOOGLE_CLIENT_ID }}
       TF_VAR_google_client_secret: ${{ secrets.GOOGLE_CLIENT_SECRET }}
-      TF_VAR_budget_notify_email: ${{ secrets.BUDGET_NOTIFY_EMAIL }}
     steps:
       - uses: actions/checkout@v4
 
@@ -78,7 +63,7 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ inputs.aws_region }}
+          aws-region: ${{ env.AWS_REGION }}
 
       # docker-container builder so --provenance=false --push behaves consistently.
       - uses: docker/setup-buildx-action@v3
@@ -94,43 +79,46 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
 
       - name: Terraform init
-        working-directory: ${{ inputs.tf_dir }}
-        run: terraform init -input=false
+        working-directory: ${{ env.TF_DIR }}
+        # State bucket name is account-derived (not hardcoded in backend.tf).
+        run: |
+          terraform init -input=false \
+            -backend-config="bucket=rabbitrole-tfstate-$(aws sts get-caller-identity --query Account --output text)"
 
       # ECR must exist before we can push the image the Lambda needs.
       - name: Ensure ECR repository
-        working-directory: ${{ inputs.tf_dir }}
+        working-directory: ${{ env.TF_DIR }}
         run: terraform apply -input=false -auto-approve -target=module.rabbitrole.aws_ecr_repository.backend
 
       - name: Build + push backend image
-        working-directory: ${{ inputs.tf_dir }}
+        working-directory: ${{ env.TF_DIR }}
         # --provenance=false: a provenance attestation would make this a manifest
         # list, which Lambda rejects ("media type ... not supported").
         run: |
           REPO=$(terraform output -raw ecr_repository_url)
           REGISTRY=${REPO%%/*}
-          aws ecr get-login-password --region ${{ inputs.aws_region }} \
+          aws ecr get-login-password --region ${{ env.AWS_REGION }} \
             | docker login --username AWS --password-stdin "$REGISTRY"
           docker buildx build --provenance=false --platform linux/amd64 \
             -t "$REPO:latest" -t "$REPO:${{ github.sha }}" --push "$GITHUB_WORKSPACE/backend"
 
       - name: Terraform apply
-        working-directory: ${{ inputs.tf_dir }}
+        working-directory: ${{ env.TF_DIR }}
         run: terraform apply -input=false -auto-approve
 
       # api.tf ignores image_uri (tag is :latest), so apply won't pull the new
       # digest — refresh the function code explicitly.
       - name: Refresh Lambda image
-        working-directory: ${{ inputs.tf_dir }}
+        working-directory: ${{ env.TF_DIR }}
         run: |
           REPO=$(terraform output -raw ecr_repository_url)
-          aws lambda update-function-code --region ${{ inputs.aws_region }} \
-            --function-name ${{ inputs.lambda_name }} --image-uri "$REPO:latest" >/dev/null
-          aws lambda wait function-updated --region ${{ inputs.aws_region }} \
-            --function-name ${{ inputs.lambda_name }}
+          aws lambda update-function-code --region ${{ env.AWS_REGION }} \
+            --function-name ${{ env.LAMBDA }} --image-uri "$REPO:latest" >/dev/null
+          aws lambda wait function-updated --region ${{ env.AWS_REGION }} \
+            --function-name ${{ env.LAMBDA }}
 
       - name: Build + deploy frontend
-        working-directory: ${{ inputs.tf_dir }}
+        working-directory: ${{ env.TF_DIR }}
         run: |
           API=$(terraform output -raw api_url)
           DOMAIN=$(terraform output -raw cognito_hosted_ui_domain)

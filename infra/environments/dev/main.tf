@@ -11,7 +11,7 @@ module "rabbitrole" {
   google_client_id     = var.google_client_id
   google_client_secret = var.google_client_secret
 
-  # Dev stays cheap: auto-pause to $0, no budget email.
+  # Dev stays cheap: Aurora auto-pauses to $0 when idle.
   db_min_capacity = 0
   db_max_capacity = 1
 }
