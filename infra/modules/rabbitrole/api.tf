@@ -63,11 +63,18 @@ data "aws_iam_policy_document" "lambda_runtime" {
     actions   = ["s3:PutObject", "s3:GetObject"]
     resources = ["${aws_s3_bucket.resumes.arn}/*"]
   }
-  # Account deletion: find the user by sub, then remove them.
+  # Account deletion (find user by sub, remove) + passwordless sign-up
+  # provisioning (create/confirm an email user so email-OTP sign-in works).
   statement {
-    sid       = "CognitoDelete"
-    effect    = "Allow"
-    actions   = ["cognito-idp:ListUsers", "cognito-idp:AdminDeleteUser"]
+    sid    = "CognitoAdmin"
+    effect = "Allow"
+    actions = [
+      "cognito-idp:ListUsers",
+      "cognito-idp:AdminDeleteUser",
+      "cognito-idp:AdminGetUser",
+      "cognito-idp:AdminCreateUser",
+      "cognito-idp:AdminSetUserPassword",
+    ]
     resources = [aws_cognito_user_pool.main.arn]
   }
 }

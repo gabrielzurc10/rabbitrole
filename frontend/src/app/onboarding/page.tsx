@@ -11,12 +11,14 @@ import { WorkModeSelector } from "@/components/WorkModeSelector";
 import { CityProximityEditor } from "@/components/CityProximityEditor";
 import { Stepper } from "@/components/Stepper";
 import { setOnboardingDraft } from "@/lib/onboardingDraft";
+import { useRequireAuth } from "@/lib/useRequireAuth";
 import type { CityPreference, WorkMode } from "@/types";
 
 const STEPS = ["Name", "Resume", "Roles", "Location", "Review"];
 
 export default function OnboardingPage() {
   const router = useRouter();
+  useRequireAuth(); // redirect to /login if there's no live session (e.g. via Back)
   const [step, setStep] = useState(1);
 
   const [fullName, setFullName] = useState("");

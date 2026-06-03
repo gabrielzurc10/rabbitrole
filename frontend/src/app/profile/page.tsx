@@ -15,10 +15,12 @@ import { CityProximityEditor } from "@/components/CityProximityEditor";
 import { getProfile, saveProfile, deleteAccount, ApiError } from "@/lib/api";
 import { setOnboardingDraft } from "@/lib/onboardingDraft";
 import { logout } from "@/lib/auth";
+import { useRequireAuth } from "@/lib/useRequireAuth";
 import type { CityPreference, Profile, WorkMode } from "@/types";
 
 export default function ProfilePage() {
   const router = useRouter();
+  const ready = useRequireAuth();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -33,6 +35,7 @@ export default function ProfilePage() {
   const [deleteOpen, setDeleteOpen] = useState(false);
 
   useEffect(() => {
+    if (!ready) return; // wait until the auth guard confirms a live session
     getProfile()
       .then((p) => {
         if (!p) {
@@ -46,7 +49,7 @@ export default function ProfilePage() {
         setCities(p.cities);
       })
       .catch((e) => setLoadError(e instanceof ApiError ? e.message : "Could not load your profile."));
-  }, [router]);
+  }, [ready, router]);
 
   if (loadError) {
     return (

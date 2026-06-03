@@ -1,6 +1,7 @@
-// Cognito Hosted UI auth — OAuth 2.0 Authorization Code + PKCE for the static
-// SPA. No SDK: just the Hosted UI redirect + a fetch to the token endpoint,
-// keeping the bundle lean (see CLAUDE.md).
+// Auth, no SDK (keeps the static bundle lean — see CLAUDE.md):
+//  - Email: passwordless one-time code, in-app, via Cognito's USER_AUTH API
+//    (InitiateAuth/RespondToAuthChallenge over fetch — no Hosted UI redirect).
+//  - Google: Cognito Hosted UI redirect (OAuth Authorization Code + PKCE).
 //
 // Offline-friendly: when the Cognito env vars are absent (local `npm run dev`),
 // auth runs in "demo mode" — login just routes into the app and no bearer token
@@ -9,11 +10,16 @@ import { setOnboarded } from "@/lib/session";
 
 const DOMAIN = process.env.NEXT_PUBLIC_COGNITO_DOMAIN ?? "";
 const CLIENT_ID = process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID ?? "";
+const REGION = process.env.NEXT_PUBLIC_COGNITO_REGION ?? "us-east-1";
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 const SCOPES = "openid email profile";
+
+const CIP_ENDPOINT = `https://cognito-idp.${REGION}.amazonaws.com/`;
 
 const ACCESS_TOKEN_KEY = "rr.accessToken";
 const EXPIRES_AT_KEY = "rr.expiresAt";
 const VERIFIER_KEY = "rr.pkceVerifier";
+const OTP_SESSION_KEY = "rr.otpSession";
 
 /** True only when a real Cognito Hosted UI is wired up. */
 export const isConfigured = Boolean(DOMAIN && CLIENT_ID);
@@ -41,6 +47,35 @@ function base64Url(bytes: ArrayBuffer | Uint8Array): string {
 async function challengeFor(verifier: string): Promise<string> {
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier));
   return base64Url(digest);
+}
+
+// --- Cognito Identity Provider API (email OTP) -----------------------------
+
+class CognitoError extends Error {
+  constructor(
+    public type: string,
+    message?: string,
+  ) {
+    super(message ?? type);
+  }
+}
+
+/** Unauthenticated POST to the Cognito IDP API (public client — no SigV4). */
+async function cipCall(target: string, body: unknown): Promise<Record<string, unknown>> {
+  const res = await fetch(CIP_ENDPOINT, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-amz-json-1.1",
+      "X-Amz-Target": `AWSCognitoIdentityProviderService.${target}`,
+    },
+    body: JSON.stringify(body),
+  });
+  const data = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+  if (!res.ok) {
+    const type = String(data.__type ?? "").split("#").pop() ?? "";
+    throw new CognitoError(type, typeof data.message === "string" ? data.message : undefined);
+  }
+  return data;
 }
 
 // --- Public API ------------------------------------------------------------
@@ -99,6 +134,81 @@ export async function handleRedirectCallback(): Promise<boolean> {
   // Drop the ?code= from the URL so a refresh doesn't re-exchange it.
   window.history.replaceState({}, "", window.location.pathname);
   return true;
+}
+
+/**
+ * Email passwordless step 1: provision the user (so new emails work), then have
+ * Cognito email a one-time code and stash the challenge session for step 2.
+ */
+export async function requestEmailCode(email: string): Promise<void> {
+  if (!isConfigured) return; // demo mode: no real OTP
+
+  const provisioned = await fetch(`${API_URL}/api/auth/email/start`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email }),
+  }).catch(() => null);
+  if (!provisioned) throw new Error("Can't reach the server. Please try again.");
+  if (!provisioned.ok) throw new Error("Please enter a valid email address.");
+  // 200 with { provider } means the email already belongs to that provider
+  // (e.g. Google) — don't send a code; tell the user where to sign in. (Returned
+  // as 200, not an error status, so the browser console stays clean.)
+  const start = (await provisioned.json().catch(() => ({}))) as { provider?: string };
+  if (start.provider) {
+    throw new Error(
+      `This email is registered with ${start.provider}. Please continue with ${start.provider}.`,
+    );
+  }
+
+  let data: Record<string, unknown>;
+  try {
+    data = await cipCall("InitiateAuth", {
+      AuthFlow: "USER_AUTH",
+      ClientId: CLIENT_ID,
+      AuthParameters: { USERNAME: email, PREFERRED_CHALLENGE: "EMAIL_OTP" },
+    });
+  } catch {
+    throw new Error("Couldn't send a code to that email. Please try again.");
+  }
+  const session = data.Session;
+  if (typeof session !== "string") {
+    throw new Error("Couldn't start sign-in. Please try again.");
+  }
+  sessionStorage.setItem(OTP_SESSION_KEY, session);
+}
+
+/** Email passwordless step 2: verify the code; on success the user is signed in. */
+export async function verifyEmailCode(email: string, code: string): Promise<void> {
+  if (!isConfigured) return;
+  const session = sessionStorage.getItem(OTP_SESSION_KEY) ?? "";
+
+  let data: Record<string, unknown>;
+  try {
+    data = await cipCall("RespondToAuthChallenge", {
+      ChallengeName: "EMAIL_OTP",
+      ClientId: CLIENT_ID,
+      Session: session,
+      ChallengeResponses: { USERNAME: email, EMAIL_OTP_CODE: code },
+    });
+  } catch (e) {
+    const type = e instanceof CognitoError ? e.type : "";
+    if (/CodeMismatch|NotAuthorized|ExpiredCode/.test(type)) {
+      throw new Error("Incorrect or expired code. Please try again.");
+    }
+    if (/TooManyRequests|LimitExceeded/.test(type)) {
+      throw new Error("Too many attempts. Please wait a moment and try again.");
+    }
+    throw new Error("Couldn't verify the code. Please try again.");
+  }
+
+  const result = data.AuthenticationResult as
+    | { AccessToken?: string; ExpiresIn?: number }
+    | undefined;
+  if (!result?.AccessToken) throw new Error("Sign-in failed. Please try again.");
+
+  sessionStorage.removeItem(OTP_SESSION_KEY);
+  localStorage.setItem(ACCESS_TOKEN_KEY, result.AccessToken);
+  localStorage.setItem(EXPIRES_AT_KEY, String(Date.now() + (result.ExpiresIn ?? 3600) * 1000));
 }
 
 /** Bearer token for API calls, or null when unauthenticated / in demo mode. */

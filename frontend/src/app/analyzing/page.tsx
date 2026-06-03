@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { analyzeResume, saveProfile, uploadResume, ApiError } from "@/lib/api";
 import { clearOnboardingDraft, getOnboardingDraft } from "@/lib/onboardingDraft";
+import { useRequireAuth } from "@/lib/useRequireAuth";
 
 /**
  * Runs the pipeline started from onboarding (or a profile re-analyze): upload the
@@ -14,10 +15,12 @@ import { clearOnboardingDraft, getOnboardingDraft } from "@/lib/onboardingDraft"
  */
 export default function AnalyzingPage() {
   const router = useRouter();
+  const ready = useRequireAuth();
   const [error, setError] = useState<string | null>(null);
   const started = useRef(false);
 
   useEffect(() => {
+    if (!ready) return; // wait until the auth guard confirms a live session
     if (started.current) return; // guard against StrictMode double-invoke
     started.current = true;
 
@@ -44,7 +47,7 @@ export default function AnalyzingPage() {
         setError(e instanceof ApiError ? e.message : "Something went wrong while analyzing.");
       }
     })();
-  }, [router]);
+  }, [ready, router]);
 
   return (
     <div className="page">

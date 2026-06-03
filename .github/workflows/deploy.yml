@@ -130,6 +130,7 @@ jobs:
           NEXT_PUBLIC_API_URL="$API" \
           NEXT_PUBLIC_COGNITO_DOMAIN="$DOMAIN" \
           NEXT_PUBLIC_COGNITO_CLIENT_ID="$CLIENT" \
+          NEXT_PUBLIC_COGNITO_REGION="${{ env.AWS_REGION }}" \
             npm run build
           aws s3 sync out/ "s3://$BUCKET/" --delete
           aws cloudfront create-invalidation --distribution-id "$DIST" --paths '/*' >/dev/null

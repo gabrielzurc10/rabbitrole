@@ -8,10 +8,12 @@ import { ScoreSummary } from "@/components/ScoreSummary";
 import { TagList } from "@/components/TagList";
 import { MatchRing } from "@/components/MatchRing";
 import { getAnalysis, ApiError } from "@/lib/api";
+import { useRequireAuth } from "@/lib/useRequireAuth";
 import type { Analysis } from "@/types";
 
 function ResumeResult() {
   const params = useSearchParams();
+  const ready = useRequireAuth();
   const id = params.get("id");
   const resumeId = params.get("resumeId") ?? "";
   const role = params.get("role") ?? "";
@@ -20,13 +22,13 @@ function ResumeResult() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!id) return;
+    if (!ready || !id) return; // wait until the auth guard confirms a live session
     getAnalysis(id)
       .then(setAnalysis)
       .catch((e) =>
         setError(e instanceof ApiError ? e.message : "Could not load analysis."),
       );
-  }, [id]);
+  }, [ready, id]);
 
   if (!id || error) {
     return (

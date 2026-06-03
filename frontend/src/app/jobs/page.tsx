@@ -5,24 +5,29 @@ import { useRouter } from "next/navigation";
 import { Icon } from "@/components/ui/icon";
 import { JobCard } from "@/components/JobCard";
 import { getJobsForMe, ApiError } from "@/lib/api";
+import { useRequireAuth } from "@/lib/useRequireAuth";
 import type { Job } from "@/types";
 
 export default function JobsPage() {
   const router = useRouter();
+  const ready = useRequireAuth();
   const [jobs, setJobs] = useState<Job[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!ready) return; // wait until the auth guard confirms a live session
     getJobsForMe()
-      .then(setJobs)
-      .catch((e) => {
-        if (e instanceof ApiError && e.status === 404) {
-          router.replace("/onboarding"); // not onboarded yet
+      .then((result) => {
+        if (result === null) {
+          router.replace("/onboarding"); // not onboarded yet (204 from the API)
           return;
         }
+        setJobs(result);
+      })
+      .catch((e) => {
         setError(e instanceof ApiError ? e.message : "Could not load jobs.");
       });
-  }, [router]);
+  }, [ready, router]);
 
   return (
     <div className="page">

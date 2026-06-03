@@ -42,6 +42,12 @@ dependencies {
     implementation("org.apache.pdfbox:pdfbox:3.0.3")
     implementation("org.apache.poi:poi-ooxml:5.3.0")
 
+    // Local dev only: auto-restarts the running app when recompiled classes
+    // change. `developmentOnly` keeps it out of the bootJar, so it never ships in
+    // the Lambda image. Pair `./gradlew bootRun` with `./gradlew classes -t`
+    // (continuous compile) in another terminal to get save -> restart.
+    developmentOnly("org.springframework.boot:spring-boot-devtools")
+
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }

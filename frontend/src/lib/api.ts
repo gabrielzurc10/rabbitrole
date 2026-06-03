@@ -14,6 +14,20 @@ import { setOnboarded } from "@/lib/session";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 
+let warmed = false;
+/**
+ * Fire-and-forget ping to the cheap /healthz endpoint so the Lambda container
+ * starts spinning up while the user is still reading/typing — turning what would
+ * be a cold start on their first real request (sign-in, upload) into a warm one.
+ * Safe to call from multiple places: it fires at most once per page load and
+ * swallows every error (e.g. the local backend not running in demo mode).
+ */
+export function warmUp(): void {
+  if (warmed || typeof window === "undefined") return;
+  warmed = true;
+  void fetch(`${BASE_URL}/healthz`, { method: "GET", cache: "no-store" }).catch(() => {});
+}
+
 /** Error carrying the backend's message + HTTP status, for the UI to show. */
 export class ApiError extends Error {
   constructor(
@@ -104,19 +118,19 @@ function normalizeProfile(raw: ProfileApi): Profile {
   return { ...raw, workMode: WORK_MODE_FROM_API[raw.workMode] ?? "remote" };
 }
 
-/** The signed-in user's profile, or null if they haven't onboarded yet (404). */
+/**
+ * The signed-in user's profile, or null if they haven't onboarded yet.
+ * The backend returns 204 No Content (not a 404) for the "no profile" case so
+ * the browser doesn't log it as a console error — request() maps 204 to undefined.
+ */
 export async function getProfile(): Promise<Profile | null> {
-  try {
-    const profile = normalizeProfile(await request<ProfileApi>("/api/profiles/me"));
-    setOnboarded(true);
-    return profile;
-  } catch (e) {
-    if (e instanceof ApiError && e.status === 404) {
-      setOnboarded(false);
-      return null;
-    }
-    throw e;
+  const raw = await request<ProfileApi | undefined>("/api/profiles/me");
+  if (!raw) {
+    setOnboarded(false);
+    return null;
   }
+  setOnboarded(true);
+  return normalizeProfile(raw);
 }
 
 /** Create or update the signed-in user's profile. */
@@ -142,16 +156,20 @@ export async function saveProfile(profile: Profile): Promise<Profile> {
   return saved;
 }
 
-/** Jobs matched to the signed-in user's saved preferences + resume. */
-export async function getJobsForMe(): Promise<Job[]> {
-  try {
-    const jobs = await request<Job[]>("/api/jobs/me");
-    setOnboarded(true);
-    return jobs;
-  } catch (e) {
-    if (e instanceof ApiError && e.status === 404) setOnboarded(false);
-    throw e;
+/**
+ * Jobs matched to the signed-in user's saved preferences + resume, or null if
+ * they haven't onboarded yet. The backend answers 204 No Content (not a 404) for
+ * the "no profile" case so the browser doesn't log a console error — request()
+ * maps 204 to undefined.
+ */
+export async function getJobsForMe(): Promise<Job[] | null> {
+  const jobs = await request<Job[] | undefined>("/api/jobs/me");
+  if (!jobs) {
+    setOnboarded(false);
+    return null;
   }
+  setOnboarded(true);
+  return jobs;
 }
 
 /** Permanently delete the signed-in user's account and all their data. */

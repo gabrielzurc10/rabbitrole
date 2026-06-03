@@ -33,6 +33,8 @@ public class SecurityConfig {
                         // but permit it explicitly as well so it never hits auth.
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/healthz", "/actuator/health", "/error").permitAll()
+                        // Passwordless sign-in bootstrap runs pre-login (no token).
+                        .requestMatchers(HttpMethod.POST, "/api/auth/email/start").permitAll()
                         .requestMatchers("/api/**").authenticated()
                         .anyRequest().permitAll())
                 .oauth2ResourceServer(oauth -> oauth.jwt(Customizer.withDefaults()));

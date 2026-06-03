@@ -1,11 +1,11 @@
 package com.rabbitrole.jobs;
 
-import com.rabbitrole.common.ApiException;
 import com.rabbitrole.common.CurrentUser;
 import com.rabbitrole.jobs.dto.Job;
 import com.rabbitrole.profiles.Profile;
 import com.rabbitrole.profiles.ProfileService;
 import com.rabbitrole.resume.ResumeService;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -47,14 +47,19 @@ public class JobController {
     }
 
     @GetMapping("/me")
-    public List<Job> forMe() {
+    public ResponseEntity<List<Job>> forMe() {
         String userId = currentUser.id();
-        Profile profile = profiles.find(userId)
-                .orElseThrow(() -> ApiException.notFound("No profile found. Complete onboarding first."));
+        // 204 (not 404) when there's no profile yet, so the browser doesn't log a
+        // console error for the expected "not onboarded" case — the frontend gates
+        // on it and routes to onboarding.
+        Profile profile = profiles.find(userId).orElse(null);
+        if (profile == null) {
+            return ResponseEntity.noContent().build();
+        }
         // The resume is read under the caller's id, enforcing ownership.
         String resumeText = profile.resumeId() == null
                 ? null
                 : resumes.extractedText(profile.resumeId(), userId);
-        return jobs.forProfile(profile, resumeText);
+        return ResponseEntity.ok(jobs.forProfile(profile, resumeText));
     }
 }

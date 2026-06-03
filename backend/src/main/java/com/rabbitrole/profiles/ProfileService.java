@@ -1,6 +1,5 @@
 package com.rabbitrole.profiles;
 
-import com.rabbitrole.common.ApiException;
 import com.rabbitrole.profiles.dto.ProfileResponse;
 import com.rabbitrole.profiles.dto.SaveProfileRequest;
 import org.springframework.stereotype.Service;
@@ -22,9 +21,9 @@ public class ProfileService {
         this.repository = repository;
     }
 
-    /** The user's profile, or 404 if they haven't onboarded yet. */
-    public ProfileResponse get(String userId) {
-        return toResponse(require(userId));
+    /** The user's profile as a response DTO, or empty if they haven't onboarded. */
+    public Optional<ProfileResponse> findResponse(String userId) {
+        return repository.findByUserId(userId).map(this::toResponse);
     }
 
     /** Domain profile (for the jobs feature), or empty if not onboarded. */
@@ -48,11 +47,6 @@ public class ProfileService {
                 req.score(),
                 Instant.now()));
         return toResponse(saved);
-    }
-
-    private Profile require(String userId) {
-        return repository.findByUserId(userId)
-                .orElseThrow(() -> ApiException.notFound("No profile found. Complete onboarding first."));
     }
 
     private ProfileResponse toResponse(Profile p) {

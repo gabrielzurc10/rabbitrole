@@ -1,6 +1,5 @@
 package com.rabbitrole.profiles;
 
-import com.rabbitrole.common.ApiException;
 import com.rabbitrole.profiles.dto.ProfileResponse;
 import com.rabbitrole.profiles.dto.SaveProfileRequest;
 import org.junit.jupiter.api.BeforeEach;
@@ -9,11 +8,10 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * Profile save/get with the in-memory repo — verifies upsert, REMOTE clears
- * cities, per-user keying, and the not-found gate.
+ * cities, per-user keying, and the empty-when-not-onboarded gate.
  */
 class ProfileServiceTest {
 
@@ -39,7 +37,7 @@ class ProfileServiceTest {
         assertThat(saved.cities()).hasSize(1);
         assertThat(saved.score()).isEqualTo(82);
 
-        ProfileResponse fetched = service.get("user-1");
+        ProfileResponse fetched = service.findResponse("user-1").orElseThrow();
         assertThat(fetched.fullName()).isEqualTo("Ada Lovelace");
         assertThat(fetched.workMode()).isEqualTo(WorkMode.HYBRID);
     }
@@ -51,7 +49,7 @@ class ProfileServiceTest {
         service.save(new SaveProfileRequest("Second", List.of("Data Scientist"),
                 WorkMode.REMOTE, null, null, null, 50), "user-1");
 
-        ProfileResponse fetched = service.get("user-1");
+        ProfileResponse fetched = service.findResponse("user-1").orElseThrow();
         assertThat(fetched.fullName()).isEqualTo("Second");
         assertThat(fetched.targetRoles()).containsExactly("Data Scientist");
     }
@@ -61,7 +59,7 @@ class ProfileServiceTest {
         service.save(new SaveProfileRequest("Remote Rick", List.of("DevOps Engineer"),
                 WorkMode.REMOTE, List.of(new CityPreference("Denver", "CO", 50)), null, null, null), "user-1");
 
-        assertThat(service.get("user-1").cities()).isEmpty();
+        assertThat(service.findResponse("user-1").orElseThrow().cities()).isEmpty();
     }
 
     @Test
@@ -69,15 +67,11 @@ class ProfileServiceTest {
         service.save(new SaveProfileRequest("Owner", List.of("Backend Engineer"),
                 WorkMode.REMOTE, null, null, null, null), "owner");
 
-        assertThatThrownBy(() -> service.get("someone-else"))
-                .isInstanceOf(ApiException.class)
-                .hasMessageContaining("No profile found");
+        assertThat(service.findResponse("someone-else")).isEmpty();
     }
 
     @Test
-    void missingProfileIsNotFound() {
-        assertThatThrownBy(() -> service.get("nobody"))
-                .isInstanceOf(ApiException.class)
-                .hasMessageContaining("No profile found");
+    void missingProfileIsEmpty() {
+        assertThat(service.findResponse("nobody")).isEmpty();
     }
 }

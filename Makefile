@@ -101,7 +101,7 @@ define build_sync_frontend
 	  BUCKET=$$(terraform output -raw frontend_bucket) && \
 	  DIST=$$(terraform output -raw cloudfront_distribution_id) && \
 	  cd $(ROOT)/frontend && \
-	  NEXT_PUBLIC_API_URL=$$API NEXT_PUBLIC_COGNITO_DOMAIN=$$DOMAIN NEXT_PUBLIC_COGNITO_CLIENT_ID=$$CLIENT npm run build && \
+	  NEXT_PUBLIC_API_URL=$$API NEXT_PUBLIC_COGNITO_DOMAIN=$$DOMAIN NEXT_PUBLIC_COGNITO_CLIENT_ID=$$CLIENT NEXT_PUBLIC_COGNITO_REGION=$(REGION) npm run build && \
 	  aws s3 sync out/ s3://$$BUCKET/ --delete && \
 	  aws cloudfront create-invalidation --distribution-id $$DIST --paths '/*' >/dev/null && \
 	  echo "Frontend deployed to s3://$$BUCKET and CDN invalidated."

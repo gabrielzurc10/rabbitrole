@@ -8,6 +8,15 @@ resource "aws_cognito_user_pool" "main" {
   username_attributes      = ["email"]
   auto_verified_attributes = ["email"]
 
+  # Email one-time code is the first auth factor. Cognito *requires* PASSWORD to
+  # be listed too, but the web client enables no password flows and provisioned
+  # users only get a random, unknown password — so sign-in is effectively
+  # passwordless (the SPA always requests EMAIL_OTP). Google is federated and
+  # unaffected by this policy.
+  sign_in_policy {
+    allowed_first_auth_factors = ["EMAIL_OTP", "PASSWORD"]
+  }
+
   account_recovery_setting {
     recovery_mechanism {
       name     = "verified_email"
@@ -55,10 +64,11 @@ resource "aws_cognito_user_pool_client" "web" {
 
   generate_secret = false # public SPA client (uses PKCE, no secret)
 
+  # Choice-based auth (USER_AUTH) drives the in-app email-OTP flow; no password
+  # flows since the app is passwordless. Refresh keeps sessions alive.
   explicit_auth_flows = [
-    "ALLOW_USER_SRP_AUTH",
+    "ALLOW_USER_AUTH",
     "ALLOW_REFRESH_TOKEN_AUTH",
-    "ALLOW_USER_PASSWORD_AUTH",
   ]
 
   # OAuth Authorization Code + PKCE via the Hosted UI.
