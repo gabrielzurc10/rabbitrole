@@ -25,8 +25,8 @@ class MatchScorerTest {
 
         MatchScorer scorer = new MatchScorer(embeddings);
         List<Job> jobs = List.of(
-                new Job("A", "Match", "Acme", "Remote", "desc", "url", null),
-                new Job("B", "NoMatch", "Beta", "Remote", "desc", "url", null));
+                new Job("A", "Match", "Acme", null, "Remote", "", "", "remote", null, "desc", "url", null, null, null, null, null, null, null),
+                new Job("B", "NoMatch", "Beta", null, "Remote", "", "", "remote", null, "desc", "url", null, null, null, null, null, null, null));
 
         List<Job> ranked = scorer.score("resume", jobs);
 

@@ -10,14 +10,11 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties("aws")
 public class AwsProperties {
 
-    private final Db db = new Db();
     private final Cognito cognito = new Cognito();
     private String resumesBucket;
     private String ssmPrefix;
-
-    public Db getDb() {
-        return db;
-    }
+    /** Prefix for the DynamoDB table names, e.g. {@code rabbitrole-dev} → {@code …-profiles}. */
+    private String dynamoTablePrefix;
 
     public Cognito getCognito() {
         return cognito;
@@ -39,35 +36,12 @@ public class AwsProperties {
         this.ssmPrefix = ssmPrefix;
     }
 
-    /** Aurora coordinates the RDS Data API needs to address the cluster. */
-    public static class Db {
-        private String clusterArn;
-        private String secretArn;
-        private String name;
+    public String getDynamoTablePrefix() {
+        return dynamoTablePrefix;
+    }
 
-        public String getClusterArn() {
-            return clusterArn;
-        }
-
-        public void setClusterArn(String clusterArn) {
-            this.clusterArn = clusterArn;
-        }
-
-        public String getSecretArn() {
-            return secretArn;
-        }
-
-        public void setSecretArn(String secretArn) {
-            this.secretArn = secretArn;
-        }
-
-        public String getName() {
-            return name;
-        }
-
-        public void setName(String name) {
-            this.name = name;
-        }
+    public void setDynamoTablePrefix(String dynamoTablePrefix) {
+        this.dynamoTablePrefix = dynamoTablePrefix;
     }
 
     /** Cognito coordinates needed to delete a user on account deletion. */

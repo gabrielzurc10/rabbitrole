@@ -8,7 +8,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * In-memory {@link ProfileRepository} so the app runs without a database.
- * Default for local + tests; {@link RdsDataProfileRepository} takes over on aws.
+ * Default for local + tests; {@link DynamoProfileRepository} takes over on aws.
  * The profile annotation is fully qualified to avoid clashing with the domain
  * {@link Profile} record in this package.
  */

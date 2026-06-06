@@ -5,7 +5,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 import software.amazon.awssdk.services.cognitoidentityprovider.CognitoIdentityProviderClient;
-import software.amazon.awssdk.services.rdsdata.RdsDataClient;
+import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.s3.S3Client;
 
 /**
@@ -19,8 +19,8 @@ import software.amazon.awssdk.services.s3.S3Client;
 public class AwsClientsConfig {
 
     @Bean
-    RdsDataClient rdsDataClient() {
-        return RdsDataClient.create();
+    DynamoDbClient dynamoDbClient() {
+        return DynamoDbClient.create();
     }
 
     @Bean

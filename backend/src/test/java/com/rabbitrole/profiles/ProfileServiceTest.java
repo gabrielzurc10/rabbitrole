@@ -1,7 +1,13 @@
 package com.rabbitrole.profiles;
 
+import com.rabbitrole.analysis.AnalysisService;
+import com.rabbitrole.analysis.InMemoryAnalysisRepository;
 import com.rabbitrole.profiles.dto.ProfileResponse;
 import com.rabbitrole.profiles.dto.SaveProfileRequest;
+import com.rabbitrole.resume.InMemoryResumeRepository;
+import com.rabbitrole.resume.LocalStorage;
+import com.rabbitrole.resume.ResumeService;
+import com.rabbitrole.resume.ResumeTextExtractor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -19,7 +25,19 @@ class ProfileServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new ProfileService(new InMemoryProfileRepository());
+        // The save-time prune only touches the resume/analysis repositories, so
+        // the AI collaborators (jobs/openai) are unused here and left null.
+        ResumeTextExtractor extractor = new ResumeTextExtractor() {
+            @Override
+            public String extract(String filename, String contentType, byte[] bytes) {
+                return "";
+            }
+        };
+        ResumeService resumes = new ResumeService(
+                new LocalStorage(), extractor, new InMemoryResumeRepository());
+        AnalysisService analyses = new AnalysisService(
+                resumes, null, null, new InMemoryAnalysisRepository());
+        service = new ProfileService(new InMemoryProfileRepository(), resumes, analyses);
     }
 
     @Test
@@ -27,8 +45,9 @@ class ProfileServiceTest {
         SaveProfileRequest req = new SaveProfileRequest(
                 "Ada Lovelace",
                 List.of("Backend Engineer", "Full Stack Engineer"),
-                WorkMode.HYBRID,
-                List.of(new CityPreference("Austin", "TX", 25)),
+                false, // local search
+                List.of(EmploymentType.FULL_TIME, EmploymentType.CONTRACT),
+                List.of(new CityPreference("Austin", "TX")),
                 "resume-1", "analysis-1", 82);
 
         ProfileResponse saved = service.save(req, "user-1");
@@ -39,15 +58,17 @@ class ProfileServiceTest {
 
         ProfileResponse fetched = service.findResponse("user-1").orElseThrow();
         assertThat(fetched.fullName()).isEqualTo("Ada Lovelace");
-        assertThat(fetched.workMode()).isEqualTo(WorkMode.HYBRID);
+        assertThat(fetched.remote()).isFalse();
+        assertThat(fetched.employmentTypes())
+                .containsExactly(EmploymentType.FULL_TIME, EmploymentType.CONTRACT);
     }
 
     @Test
     void saveUpsertsOnSameUser() {
         service.save(new SaveProfileRequest("First", List.of("Backend Engineer"),
-                WorkMode.REMOTE, null, null, null, null), "user-1");
+                true, List.of(), null, null, null, null), "user-1");
         service.save(new SaveProfileRequest("Second", List.of("Data Scientist"),
-                WorkMode.REMOTE, null, null, null, 50), "user-1");
+                true, List.of(), null, null, null, 50), "user-1");
 
         ProfileResponse fetched = service.findResponse("user-1").orElseThrow();
         assertThat(fetched.fullName()).isEqualTo("Second");
@@ -55,9 +76,12 @@ class ProfileServiceTest {
     }
 
     @Test
-    void remoteModeStoresNoCities() {
+    void remoteEligibleIgnoresCities() {
+        // Remote postings are location-agnostic, so a remote-eligible save drops cities
+        // even if some were submitted.
         service.save(new SaveProfileRequest("Remote Rick", List.of("DevOps Engineer"),
-                WorkMode.REMOTE, List.of(new CityPreference("Denver", "CO", 50)), null, null, null), "user-1");
+                true, List.of(),
+                List.of(new CityPreference("Denver", "CO")), null, null, null), "user-1");
 
         assertThat(service.findResponse("user-1").orElseThrow().cities()).isEmpty();
     }
@@ -65,7 +89,7 @@ class ProfileServiceTest {
     @Test
     void profilesAreScopedPerUser() {
         service.save(new SaveProfileRequest("Owner", List.of("Backend Engineer"),
-                WorkMode.REMOTE, null, null, null, null), "owner");
+                true, List.of(), null, null, null, null), "owner");
 
         assertThat(service.findResponse("someone-else")).isEmpty();
     }

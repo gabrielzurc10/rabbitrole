@@ -22,16 +22,31 @@ final class AnalysisPrompt {
 
     static String system() {
         return """
-            You are an expert technical resume reviewer. Critique the resume for the
-            target role, grounded in the real job postings provided. Return STRICT JSON:
+            You are an expert resume reviewer. Critique the resume for the TARGET ROLE,
+            using the provided postings only as a guide to what the role GENERALLY demands.
+            Return STRICT JSON:
             {"score": <int 0-100>, "tags":[{"severity","message","reason","suggestion","location"}]}
-            - score: a holistic 0-100 rating of how well this resume fits THIS role
-              given the postings (100 = exceptional, 0 = no fit). Be discerning.
+
+            Judge the resume against the CORE, transferable competencies of the role — the
+            skills, tools, and qualifications common to MOST postings for it. The postings
+            are a small live SAMPLE and may include niche or industry-specific openings.
+            Do NOT critique the resume for lacking:
+            - a domain/industry specialization that only some postings happen to require
+              (e.g. defense/military, robotics, healthcare, finance, a specific product),
+            - a security clearance, certification, or company/tool-specific experience that
+              is not standard for the role,
+            - any one-off requirement that appears in only a single sampled posting.
+            Flag a missing skill ONLY if it is genuinely standard for this role across the
+            board — never penalize a candidate for not matching a narrow specialty.
+
+            - score: a holistic 0-100 rating of fit for the role's CORE expectations
+              (100 = exceptional, 0 = no fit). Be discerning, but do not dock points for
+              missing niche specializations.
             - severity is one of: CRITICAL, WARNING, OPTIONAL.
             - CRITICAL: likely to get the resume rejected. WARNING: notably weakens it.
               OPTIONAL: nice-to-have polish.
-            - message: the issue, short. reason: why it matters for THIS role, citing
-              what the postings expect. suggestion: a concrete rewrite or action.
+            - message: the issue, short. reason: why it matters for the role's core
+              expectations. suggestion: a concrete rewrite or action.
             - location: the resume section or a short quoted snippet it applies to.
             Return 5-12 tags, ordered most to least important. JSON only, no prose.
             """;
@@ -51,7 +66,8 @@ final class AnalysisPrompt {
         return """
             TARGET ROLE: %s
 
-            LIVE JOB POSTINGS FOR THIS ROLE (grounding):
+            SAMPLE LIVE POSTINGS FOR THIS ROLE — a guide to the role's COMMON demand only.
+            Some may be niche/industry-specific; ignore any specialty not core to the role:
             %s
 
             RESUME:

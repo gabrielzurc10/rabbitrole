@@ -4,8 +4,8 @@ import java.util.Optional;
 
 /**
  * Persistence boundary for profiles. In-memory by default
- * ({@link InMemoryProfileRepository}); RDS Data API on aws
- * ({@link RdsDataProfileRepository}). Keyed by userId (one profile per user).
+ * ({@link InMemoryProfileRepository}); DynamoDB on aws
+ * ({@link DynamoProfileRepository}). Keyed by userId (one profile per user).
  */
 public interface ProfileRepository {
 

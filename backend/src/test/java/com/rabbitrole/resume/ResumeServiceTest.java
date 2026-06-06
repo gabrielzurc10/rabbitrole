@@ -1,6 +1,7 @@
 package com.rabbitrole.resume;
 
 import com.rabbitrole.common.ApiException;
+import com.rabbitrole.resume.dto.ResumeFile;
 import com.rabbitrole.resume.dto.ResumeResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -43,6 +44,19 @@ class ResumeServiceTest {
 
         ResumeResponse fetched = service.get(uploaded.id(), "user-1");
         assertThat(fetched.id()).isEqualTo(uploaded.id());
+    }
+
+    @Test
+    void downloadReturnsTheStoredBytes() {
+        byte[] content = "%PDF-1.4 fake".getBytes();
+        MockMultipartFile file = new MockMultipartFile(
+                "file", "resume.pdf", "application/pdf", content);
+        ResumeResponse uploaded = service.upload(file, "user-1");
+
+        ResumeFile download = service.download(uploaded.id(), "user-1");
+        assertThat(download.filename()).isEqualTo("resume.pdf");
+        assertThat(download.filetype()).isEqualTo("application/pdf");
+        assertThat(download.bytes()).isEqualTo(content);
     }
 
     @Test

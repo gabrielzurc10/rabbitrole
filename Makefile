@@ -24,7 +24,7 @@ LAMBDA    := rabbitrole-dev-backend
 
 # Source .env and re-export the app secrets under their TF_VAR_* names.
 # Single line on purpose: make runs each recipe line in its own shell.
-TF_ENV = set -a; [ -f $(ENV_FILE) ] && . ./$(ENV_FILE); set +a; export TF_VAR_openai_api_key="$$OPENAI_API_KEY" TF_VAR_adzuna_app_id="$$ADZUNA_APP_ID" TF_VAR_adzuna_app_key="$$ADZUNA_APP_KEY" TF_VAR_google_client_id="$${GOOGLE_CLIENT_ID:-}" TF_VAR_google_client_secret="$${GOOGLE_CLIENT_SECRET:-}";
+TF_ENV = set -a; [ -f $(ENV_FILE) ] && . ./$(ENV_FILE); set +a; export TF_VAR_openai_api_key="$$OPENAI_API_KEY" TF_VAR_jsearch_api_key="$$JSEARCH_API_KEY" TF_VAR_google_client_id="$${GOOGLE_CLIENT_ID:-}" TF_VAR_google_client_secret="$${GOOGLE_CLIENT_SECRET:-}";
 
 # terraform init with the state bucket derived from the caller's AWS account id,
 # so the repo isn't pinned to any one account (the bucket name isn't hardcoded

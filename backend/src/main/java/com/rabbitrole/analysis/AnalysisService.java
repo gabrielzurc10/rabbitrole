@@ -80,6 +80,11 @@ public class AnalysisService {
         return toResponse(analysis);
     }
 
+    /** Drop the user's superseded analyses, keeping only the current one. */
+    public void deleteOthers(String userId, String keepAnalysisId) {
+        repository.deleteByUserIdExcept(userId, keepAnalysisId);
+    }
+
     private List<Job> safeFetchJobs(String role) {
         try {
             return jobs.forRole(role);

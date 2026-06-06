@@ -4,7 +4,7 @@
 #
 # Requires the remote-state bootstrap to have been applied once (see DEPLOY.md)
 # and these repo Secrets: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY,
-# OPENAI_API_KEY, ADZUNA_APP_ID, ADZUNA_APP_KEY. Optional: GOOGLE_CLIENT_ID,
+# OPENAI_API_KEY, JSEARCH_API_KEY. Optional: GOOGLE_CLIENT_ID,
 # GOOGLE_CLIENT_SECRET.
 
 name: deploy
@@ -52,8 +52,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       TF_VAR_openai_api_key: ${{ secrets.OPENAI_API_KEY }}
-      TF_VAR_adzuna_app_id: ${{ secrets.ADZUNA_APP_ID }}
-      TF_VAR_adzuna_app_key: ${{ secrets.ADZUNA_APP_KEY }}
+      TF_VAR_jsearch_api_key: ${{ secrets.JSEARCH_API_KEY }}
       TF_VAR_google_client_id: ${{ secrets.GOOGLE_CLIENT_ID }}
       TF_VAR_google_client_secret: ${{ secrets.GOOGLE_CLIENT_SECRET }}
     steps:

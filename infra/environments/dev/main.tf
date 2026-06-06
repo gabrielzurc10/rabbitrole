@@ -4,16 +4,11 @@ module "rabbitrole" {
   env    = "dev"
   region = var.region
 
-  openai_api_key = var.openai_api_key
-  adzuna_app_id  = var.adzuna_app_id
-  adzuna_app_key = var.adzuna_app_key
+  openai_api_key  = var.openai_api_key
+  jsearch_api_key = var.jsearch_api_key
 
   google_client_id     = var.google_client_id
   google_client_secret = var.google_client_secret
-
-  # Dev stays cheap: Aurora auto-pauses to $0 when idle.
-  db_min_capacity = 0
-  db_max_capacity = 1
 }
 
 output "api_url" {

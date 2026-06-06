@@ -6,12 +6,26 @@
 const KEY = "rr.onboarded";
 const EVENT = "rr-onboarded";
 
+// Per-tab caches of the signed-in user's data (written by lib/api). Kept in
+// sessionStorage so they survive a hard navigation/reload within the tab — e.g.
+// a tab switch that reloads the page on the static-export site, where module
+// memory is dropped — so we don't re-pull from the DB. The keys live here so
+// sign-out can clear them (below) without a circular import back into lib/api.
+export const PROFILE_CACHE_KEY = "rr.profile";
+export const JOBS_CACHE_KEY = "rr.jobs";
+export const RESUME_CACHE_KEY = "rr.resumes";
+
 export function setOnboarded(value: boolean): void {
   if (typeof window === "undefined") return;
   if (value) {
     localStorage.setItem(KEY, "1");
   } else {
     localStorage.removeItem(KEY);
+    // Signing out / no profile: drop the cached data so it can't leak to the
+    // next user who signs in on this same tab.
+    sessionStorage.removeItem(PROFILE_CACHE_KEY);
+    sessionStorage.removeItem(JOBS_CACHE_KEY);
+    sessionStorage.removeItem(RESUME_CACHE_KEY);
   }
   window.dispatchEvent(new Event(EVENT));
 }

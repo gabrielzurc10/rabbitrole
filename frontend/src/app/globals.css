@@ -97,6 +97,9 @@
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
 }
+@keyframes shimmer {
+  100% { transform: translateX(100%); }
+}
 
 @layer base {
   * {
@@ -107,6 +110,18 @@
     color: hsl(var(--foreground));
     font-family: var(--font-sans), system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
+  }
+  /* Tailwind v4's Preflight defaults buttons to the arrow cursor; restore the
+     hand pointer for everything clickable (skipping disabled controls). */
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  label[for],
+  summary,
+  select:not(:disabled),
+  input[type="checkbox"]:not(:disabled),
+  input[type="radio"]:not(:disabled),
+  input[type="file"]:not(:disabled) {
+    cursor: pointer;
   }
   /* Respect reduced-motion globally. */
   @media (prefers-reduced-motion: reduce) {

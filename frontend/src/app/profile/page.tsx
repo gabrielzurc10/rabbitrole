@@ -1,111 +1,182 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Card, CardBody, CardTitle, CardSubtitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Dialog } from "@/components/ui/dialog";
-import { MatchRing } from "@/components/MatchRing";
+import { ErrorAlert } from "@/components/ui/alert";
+import { Toast } from "@/components/ui/toast";
+import { ProfileSkeleton } from "@/components/Skeleton";
+import { ResumeCard } from "@/components/ResumeCard";
 import { ResumeUploader } from "@/components/ResumeUploader";
-import { RoleChipInput } from "@/components/RoleChipInput";
-import { WorkModeSelector } from "@/components/WorkModeSelector";
-import { CityProximityEditor } from "@/components/CityProximityEditor";
-import { getProfile, saveProfile, deleteAccount, ApiError } from "@/lib/api";
-import { setOnboardingDraft } from "@/lib/onboardingDraft";
+import { PreferenceFields } from "@/components/PreferenceFields";
+import { getProfile, peekProfile, getResume, peekResume, saveProfile, deleteAccount, ApiError } from "@/lib/api";
+import { setOnboardingDraft, takeAnalyzeError } from "@/lib/onboardingDraft";
 import { logout } from "@/lib/auth";
 import { useRequireAuth } from "@/lib/useRequireAuth";
-import type { CityPreference, Profile, WorkMode } from "@/types";
+import type { CityPreference, EmploymentType, Profile } from "@/types";
+
+// Flips true after this tab's first mount. Module-scoped (survives remounts) so a
+// client-side tab switch can seed from the cache instantly, while the very first
+// render after a full page load still matches the server-prerendered skeleton —
+// reading sessionStorage during that initial render would diverge from the static
+// HTML and trip a hydration mismatch (React #418).
+let hydrated = false;
 
 export default function ProfilePage() {
   const router = useRouter();
   const ready = useRequireAuth();
-  const [profile, setProfile] = useState<Profile | null>(null);
+  // Seed from the cache so switching back to this tab shows the profile instantly,
+  // with no refetch or skeleton flash — but only once past the initial hydration
+  // (see `hydrated` above); a full refresh starts from the skeleton. On a full
+  // reload getProfile() still returns the cache (no network), so no /onboarding bounce.
+  const cached = hydrated ? (peekProfile() ?? null) : null;
+
+  const [profile, setProfile] = useState<Profile | null>(cached);
   const [loadError, setLoadError] = useState<string | null>(null);
 
   // Editable copy of the preferences.
-  const [fullName, setFullName] = useState("");
-  const [roles, setRoles] = useState<string[]>([]);
-  const [workMode, setWorkMode] = useState<WorkMode | null>(null);
-  const [cities, setCities] = useState<CityPreference[]>([]);
+  const [fullName, setFullName] = useState(cached?.fullName ?? "");
+  const [roles, setRoles] = useState<string[]>(cached?.targetRoles ?? []);
+  const [remote, setRemote] = useState<boolean>(cached?.remote ?? false);
+  const [employmentTypes, setEmploymentTypes] = useState<EmploymentType[]>(
+    cached?.employmentTypes ?? [],
+  );
+  const [cities, setCities] = useState<CityPreference[]>(cached?.cities ?? []);
 
   const [saving, setSaving] = useState(false);
-  const [savedMsg, setSavedMsg] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [savedToast, setSavedToast] = useState(false);
+
+  // If a re-analyze just failed, /analyzing sent us back here with a one-shot message.
+  // Read after mount (it's a browser-only value) to keep the static export hydration clean.
+  const [analyzeError, setAnalyzeError] = useState<string | null>(null);
+  useEffect(() => {
+    const message = takeAnalyzeError();
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- one-shot mount read
+    if (message) setAnalyzeError(message);
+  }, []);
   const [deleteOpen, setDeleteOpen] = useState(false);
 
   useEffect(() => {
+    hydrated = true;
     if (!ready) return; // wait until the auth guard confirms a live session
+    if (profile) return; // already cached from a previous visit — don't refetch
     getProfile()
       .then((p) => {
         if (!p) {
-          router.replace("/onboarding");
+          router.replace("/onboarding/");
           return;
         }
         setProfile(p);
         setFullName(p.fullName);
         setRoles(p.targetRoles);
-        setWorkMode(p.workMode);
+        setRemote(p.remote);
+        setEmploymentTypes(p.employmentTypes);
         setCities(p.cities);
       })
       .catch((e) => setLoadError(e instanceof ApiError ? e.message : "Could not load your profile."));
-  }, [ready, router]);
+  }, [ready, router, profile]);
+
+  // Hold the full skeleton until the resume metadata is loaded too, so the resume
+  // card never flashes a half-loaded state (it's seeded from this same cache).
+  const resumeId = profile?.resumeId;
+  const resumeCached = !resumeId || peekResume(resumeId) != null;
+  const [resumeFetched, setResumeFetched] = useState(false);
+  useEffect(() => {
+    if (!resumeId || peekResume(resumeId)) return; // nothing to fetch
+    getResume(resumeId)
+      .catch(() => {}) // a miss isn't fatal — the card handles it
+      .finally(() => setResumeFetched(true));
+  }, [resumeId]);
 
   if (loadError) {
     return (
       <div className="page">
-        <p className="text-center text-critical">{loadError}</p>
+        <div className="mx-auto max-w-md">
+          <ErrorAlert message={loadError} />
+        </div>
       </div>
     );
   }
-  if (!profile || !workMode) {
+  if (!profile || !(resumeCached || resumeFetched)) {
     return (
       <div className="page">
-        <p className="text-center text-muted-foreground">Loading your profile…</p>
+        <ProfileSkeleton />
       </div>
     );
   }
 
-  const needsCities = workMode === "in-person" || workMode === "hybrid";
-  const citiesValid =
-    !needsCities || (cities.length > 0 && cities.every((c) => c.city.trim() && c.state.trim()));
-  const canSave = fullName.trim().length > 0 && roles.length > 0 && citiesValid;
+  // Remote postings are location-agnostic, so cities only apply (and are validated)
+  // for a non-remote search. No cities = "all locations"; any city added must be filled.
+  const needsCities = !remote;
+  const citiesValid = !needsCities || cities.every((c) => c.city.trim() && c.state.trim());
+  const valid = fullName.trim().length > 0 && roles.length > 0 && citiesValid;
+
+  // Enable Save only when the editable fields actually differ from what's saved.
+  // Type order doesn't matter (sorted); roles + cities are order-sensitive.
+  const signature = (p: {
+    fullName: string;
+    targetRoles: string[];
+    remote: boolean;
+    employmentTypes: EmploymentType[];
+    cities: CityPreference[];
+  }) =>
+    JSON.stringify([
+      p.fullName,
+      p.targetRoles,
+      p.remote,
+      [...p.employmentTypes].sort(),
+      p.cities,
+    ]);
+  const dirty =
+    signature({
+      fullName: fullName.trim(),
+      targetRoles: roles,
+      remote,
+      employmentTypes,
+      cities: needsCities ? cities : [],
+    }) !== signature(profile);
+  const canSave = valid && dirty;
 
   function prefs(): Profile {
     return {
       ...(profile as Profile),
       fullName: fullName.trim(),
       targetRoles: roles,
-      workMode: workMode as WorkMode,
+      remote,
+      employmentTypes,
       cities: needsCities ? cities : [],
     };
   }
 
   async function save() {
     setSaving(true);
-    setSavedMsg(null);
+    setSaveError(null);
     try {
       const updated = await saveProfile(prefs());
       setProfile(updated);
-      setSavedMsg("Saved");
-    } catch (e) {
-      setSavedMsg(e instanceof ApiError ? e.message : "Could not save.");
+      setSavedToast(true);
+    } catch {
+      setSaveError("An error has occurred. Please try again.");
     } finally {
       setSaving(false);
     }
   }
 
   function reAnalyze(file: File) {
-    setOnboardingDraft({ profile: prefs(), file });
-    router.push("/analyzing");
+    setOnboardingDraft({ profile: prefs(), file, origin: "/profile/" });
+    router.replace("/analyzing/");
   }
 
   async function confirmDelete() {
     try {
       await deleteAccount();
       logout(); // clears tokens + redirects
-    } catch (e) {
-      setSavedMsg(e instanceof ApiError ? e.message : "Could not delete account.");
+    } catch {
+      setSaveError("An error has occurred. Please try again.");
       setDeleteOpen(false);
     }
   }
@@ -114,31 +185,19 @@ export default function ProfilePage() {
     <div className="page">
       <div className="mx-auto max-w-2xl space-y-6">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">{profile.fullName}</h1>
+          <h1 className="text-2xl font-bold uppercase tracking-tight">{profile.fullName}</h1>
           <p className="mt-1 text-muted-foreground">Your profile and resume score.</p>
         </div>
 
-        {/* Score */}
-        <Card>
-          <CardBody className="flex items-center gap-5">
-            <MatchRing percent={profile.score ?? 0} size={104} />
-            <div>
-              <CardTitle>Resume score</CardTitle>
-              <CardSubtitle className="mt-1">
-                Graded against your primary role, {profile.targetRoles[0]}.
-              </CardSubtitle>
-              {profile.analysisId && (
-                <Link
-                  href={`/resume?id=${profile.analysisId}`}
-                  className="btn btn-outline btn-sm mt-3"
-                >
-                  <Icon name="file-text" className="h-4 w-4" />
-                  View full review
-                </Link>
-              )}
-            </div>
-          </CardBody>
-        </Card>
+        {analyzeError && <ErrorAlert message={analyzeError} />}
+
+        {/* Resume score + file (view / download / full review) */}
+        <ResumeCard
+          resumeId={profile.resumeId}
+          score={profile.score ?? 0}
+          role={profile.targetRoles[0]}
+          analysisId={profile.analysisId}
+        />
 
         {/* Re-analyze */}
         <Card>
@@ -164,28 +223,22 @@ export default function ProfilePage() {
               />
             </div>
 
-            <div>
-              <label className="label">Target roles</label>
-              <RoleChipInput value={roles} onChange={setRoles} />
-            </div>
+            <PreferenceFields
+              roles={roles}
+              onRolesChange={setRoles}
+              remote={remote}
+              onRemoteChange={setRemote}
+              cities={cities}
+              onCitiesChange={setCities}
+              employmentTypes={employmentTypes}
+              onEmploymentTypesChange={setEmploymentTypes}
+            />
 
-            <div>
-              <label className="label">Work mode</label>
-              <WorkModeSelector value={workMode} onChange={setWorkMode} />
-            </div>
-
-            {needsCities && (
-              <div>
-                <label className="label">Locations</label>
-                <CityProximityEditor value={cities} onChange={setCities} />
-              </div>
-            )}
-
-            <div className="flex items-center gap-3">
+            <div className="space-y-3">
               <Button onClick={save} disabled={!canSave || saving}>
                 {saving ? "Saving…" : "Save changes"}
               </Button>
-              {savedMsg && <span className="text-sm text-muted-foreground">{savedMsg}</span>}
+              {saveError && <ErrorAlert message={saveError} />}
             </div>
           </CardBody>
         </Card>
@@ -221,6 +274,8 @@ export default function ProfilePage() {
           </Button>
         </div>
       </Dialog>
+
+      <Toast open={savedToast} message="Saved" onClose={() => setSavedToast(false)} />
     </div>
   );
 }

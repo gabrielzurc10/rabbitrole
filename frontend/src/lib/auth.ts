@@ -20,6 +20,9 @@ const ACCESS_TOKEN_KEY = "rr.accessToken";
 const EXPIRES_AT_KEY = "rr.expiresAt";
 const VERIFIER_KEY = "rr.pkceVerifier";
 const OTP_SESSION_KEY = "rr.otpSession";
+// Demo mode has no real token, so "signed out" is tracked with this flag instead
+// (per-tab). Lets sign-out actually lock the app locally, like the deployed app.
+const DEMO_LOGOUT_KEY = "rr.demoLoggedOut";
 
 /** True only when a real Cognito Hosted UI is wired up. */
 export const isConfigured = Boolean(DOMAIN && CLIENT_ID);
@@ -83,7 +86,7 @@ async function cipCall(target: string, body: unknown): Promise<Record<string, un
 /** Start sign-in. `provider` ("Google") jumps straight to that IdP. */
 export async function login(provider?: string): Promise<void> {
   if (!isConfigured) {
-    window.location.assign("/onboarding");
+    window.location.assign("/onboarding/");
     return;
   }
   const verifier = randomString();
@@ -220,9 +223,17 @@ export function getAccessToken(): string | null {
   return token;
 }
 
-/** In demo mode everyone is "signed in"; otherwise gate on a live token. */
+/** Demo mode is "signed in" unless explicitly signed out; otherwise gate on a live token. */
 export function isAuthenticated(): boolean {
-  return !isConfigured || getAccessToken() !== null;
+  if (!isConfigured) {
+    return typeof window === "undefined" || sessionStorage.getItem(DEMO_LOGOUT_KEY) === null;
+  }
+  return getAccessToken() !== null;
+}
+
+/** Clears the demo "signed out" flag — called when the user signs in again locally. */
+export function clearDemoSession(): void {
+  if (typeof window !== "undefined") sessionStorage.removeItem(DEMO_LOGOUT_KEY);
 }
 
 /** Sign out: clear tokens and (when configured) end the Hosted UI session. */
@@ -231,7 +242,8 @@ export function logout(): void {
   localStorage.removeItem(EXPIRES_AT_KEY);
   setOnboarded(false); // hide the Jobs/Profile tabs
   if (!isConfigured) {
-    window.location.assign("/");
+    sessionStorage.setItem(DEMO_LOGOUT_KEY, "1"); // demo: remember we signed out
+    window.location.assign("/login/");
     return;
   }
   const params = new URLSearchParams({

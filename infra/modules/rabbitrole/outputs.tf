@@ -28,16 +28,6 @@ output "ecr_repository_url" {
   value       = aws_ecr_repository.backend.repository_url
 }
 
-output "db_cluster_arn" {
-  description = "Aurora cluster ARN (RDS Data API target)."
-  value       = aws_rds_cluster.main.arn
-}
-
-output "db_secret_arn" {
-  description = "Secrets Manager ARN for the DB master password."
-  value       = aws_rds_cluster.main.master_user_secret[0].secret_arn
-}
-
 output "cognito_user_pool_id" {
   description = "Cognito user pool id."
   value       = aws_cognito_user_pool.main.id

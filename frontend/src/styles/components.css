@@ -87,6 +87,53 @@
     @apply bg-optional/10 text-optional;
   }
 
+  /* ---------- job card ---------- */
+  .job-card {
+    @apply flex flex-col overflow-hidden rounded-xl border border-border bg-card
+      text-card-foreground shadow-sm transition-shadow hover:shadow-md sm:flex-row;
+  }
+  .job-card-main {
+    @apply min-w-0 flex-1 space-y-4 p-5;
+  }
+  .job-card-logo {
+    @apply h-11 w-11 shrink-0 rounded-lg border border-border bg-background object-contain;
+  }
+  .job-card-title {
+    @apply truncate font-semibold leading-tight;
+  }
+  .job-card-company {
+    @apply truncate text-sm text-muted-foreground;
+  }
+  .job-card-rule {
+    @apply border-t border-border;
+  }
+  .job-card-meta {
+    /* Fixed 3-column grid so each summary always sits in the same slot regardless
+       of which others are present (location / remote / type on top, posted / salary
+       below). */
+    @apply grid grid-cols-3 items-center gap-x-3 gap-y-2;
+  }
+  .job-card-match {
+    @apply flex shrink-0 flex-col items-center justify-center gap-2 border-t border-border
+      bg-gradient-to-br from-primary/15 via-accent/10 to-transparent p-5 text-center
+      sm:w-44 sm:border-l sm:border-t-0;
+  }
+  .job-card-match-label {
+    @apply text-xs font-semibold uppercase tracking-wide text-muted-foreground;
+  }
+  .job-meta-item {
+    @apply inline-flex items-center gap-1.5 text-sm text-muted-foreground;
+  }
+  .job-reason-toggle {
+    @apply inline-flex items-center gap-1.5 text-sm font-medium text-primary
+      transition-colors hover:text-primary/80
+      focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
+      focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded;
+  }
+  .job-reason-panel {
+    @apply mt-2 rounded-lg bg-muted/50 p-3;
+  }
+
   /* ---------- form ---------- */
   .label {
     @apply mb-1.5 block text-sm font-medium text-foreground;
@@ -177,6 +224,23 @@
     @apply border-primary bg-primary/10 text-primary hover:bg-primary/10;
   }
 
+  /* ---------- navbar: tabs divider + compact theme switch ---------- */
+  .nav-divider {
+    @apply mx-1 h-5 w-px bg-border;
+  }
+  .theme-switch {
+    @apply inline-flex items-center gap-0.5 rounded-lg border border-border
+      bg-muted/60 p-0.5;
+  }
+  .theme-switch-btn {
+    @apply grid h-7 w-7 place-items-center rounded-md text-muted-foreground
+      transition-colors hover:text-foreground
+      focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring;
+  }
+  .theme-switch-btn-active {
+    @apply bg-background text-primary shadow-sm hover:text-primary;
+  }
+
   /* ---------- chip input (roles) ---------- */
   .chip-input {
     @apply flex flex-wrap items-center gap-2;
@@ -196,5 +260,59 @@
   .city-row {
     @apply flex flex-wrap items-end gap-2 rounded-lg border border-border
       bg-muted/30 p-3;
+  }
+
+  /* ---------- error alert ---------- */
+  .error-alert {
+    @apply flex items-start gap-2 rounded-lg border border-critical/30
+      bg-critical/10 px-3 py-2 text-left text-sm text-critical;
+  }
+
+  /* ---------- toast (success) ---------- */
+  .toast {
+    @apply fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-lg
+      bg-primary px-4 py-3 text-sm font-medium text-primary-foreground shadow-lg;
+  }
+
+  /* ---------- skeleton (loading shimmer) ---------- */
+  .skeleton {
+    @apply relative overflow-hidden rounded-md bg-muted;
+  }
+  .skeleton::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(
+      90deg,
+      transparent,
+      hsl(var(--foreground) / 0.06),
+      transparent
+    );
+    animation: shimmer 1.5s infinite;
+  }
+
+  /* ---------- analyzing document (primary-tinted loading) ---------- */
+  /* A white "sheet of paper" whose skeleton lines shimmer in the brand
+     color instead of neutral gray — used on the resume-analyzing screen. */
+  .analyzing-doc {
+    @apply mx-auto w-full max-w-xs rounded-xl bg-white p-7 shadow-xl ring-1 ring-black/5;
+  }
+  .skeleton-primary {
+    @apply relative overflow-hidden rounded;
+    background-color: hsl(var(--primary) / 0.12);
+  }
+  .skeleton-primary::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(
+      90deg,
+      transparent,
+      hsl(var(--primary) / 0.4),
+      transparent
+    );
+    animation: shimmer 1.5s infinite;
   }
 }

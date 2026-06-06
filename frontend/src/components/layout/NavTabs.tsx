@@ -4,6 +4,7 @@ import { useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Icon } from "@/components/ui/icon";
+import { cn } from "@/lib/cn";
 import { isAuthenticated } from "@/lib/auth";
 import { isOnboarded, subscribeOnboarded } from "@/lib/session";
 
@@ -22,19 +23,35 @@ export function NavTabs() {
     () => isAuthenticated() && isOnboarded(),
     () => false,
   );
-  const onTabPage = pathname.startsWith("/jobs") || pathname.startsWith("/profile");
+  const onJobs = pathname.startsWith("/jobs");
+  const onProfile = pathname.startsWith("/profile");
 
-  if (!onboarded && !onTabPage) return null;
+  if (!onboarded && !onJobs && !onProfile) return null;
   return (
     <>
-      <Link href="/jobs" className="btn btn-ghost btn-sm">
+      <Link
+        href="/jobs/"
+        aria-current={onJobs ? "page" : undefined}
+        className={cn(
+          "btn btn-ghost btn-sm",
+          onJobs ? "bg-muted text-primary font-medium" : "text-muted-foreground",
+        )}
+      >
         <Icon name="briefcase" className="h-4 w-4" />
         Jobs
       </Link>
-      <Link href="/profile" className="btn btn-ghost btn-sm">
+      <Link
+        href="/profile/"
+        aria-current={onProfile ? "page" : undefined}
+        className={cn(
+          "btn btn-ghost btn-sm",
+          onProfile ? "bg-muted text-primary font-medium" : "text-muted-foreground",
+        )}
+      >
         <Icon name="user" className="h-4 w-4" />
         Profile
       </Link>
+      <span className="nav-divider" aria-hidden="true" />
     </>
   );
 }

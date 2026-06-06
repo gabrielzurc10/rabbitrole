@@ -4,9 +4,11 @@ import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Icon } from "@/components/ui/icon";
+import { ErrorAlert } from "@/components/ui/alert";
 import { ScoreSummary } from "@/components/ScoreSummary";
 import { TagList } from "@/components/TagList";
 import { MatchRing } from "@/components/MatchRing";
+import { ResumeReviewSkeleton } from "@/components/Skeleton";
 import { getAnalysis, ApiError } from "@/lib/api";
 import { useRequireAuth } from "@/lib/useRequireAuth";
 import type { Analysis } from "@/types";
@@ -33,11 +35,9 @@ function ResumeResult() {
   if (!id || error) {
     return (
       <div className="page">
-        <div className="mx-auto max-w-md text-center">
-          <p className="text-critical">
-            {error ?? "No analysis id provided."}
-          </p>
-          <Link href="/profile" className="btn btn-outline mt-4">
+        <div className="mx-auto max-w-md">
+          <ErrorAlert message={error ?? "No analysis id provided."} />
+          <Link href="/profile/" className="btn btn-outline mt-4">
             Back to profile
           </Link>
         </div>
@@ -48,12 +48,12 @@ function ResumeResult() {
   if (!analysis) {
     return (
       <div className="page">
-        <p className="text-center text-muted-foreground">Loading analysis…</p>
+        <ResumeReviewSkeleton />
       </div>
     );
   }
 
-  const jobsHref = `/jobs?role=${encodeURIComponent(role || analysis.role)}${
+  const jobsHref = `/jobs/?role=${encodeURIComponent(role || analysis.role)}${
     resumeId ? `&resumeId=${resumeId}` : ""
   }`;
 
@@ -104,7 +104,7 @@ export default function ResumePage() {
     <Suspense
       fallback={
         <div className="page">
-          <p className="text-center text-muted-foreground">Loading…</p>
+          <ResumeReviewSkeleton />
         </div>
       }
     >

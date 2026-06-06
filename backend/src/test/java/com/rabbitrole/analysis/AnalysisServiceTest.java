@@ -38,7 +38,7 @@ class AnalysisServiceTest {
 
         when(resumes.extractedText(anyString(), anyString())).thenReturn("Backend engineer resume text.");
         when(jobs.forRole(anyString())).thenReturn(List.of(
-                new Job("1", "Backend Engineer", "Acme", "Remote", "Java, AWS", "http://x", null)));
+                new Job("1", "Backend Engineer", "Acme", null, "Remote", "", "", "remote", null, "Java, AWS", "http://x", null, null, null, null, null, null, null)));
     }
 
     @Test
@@ -72,7 +72,7 @@ class AnalysisServiceTest {
 
     @Test
     void jobOutageStillProducesAnalysis() {
-        when(jobs.forRole(anyString())).thenThrow(new RuntimeException("Adzuna down"));
+        when(jobs.forRole(anyString())).thenThrow(new RuntimeException("jobs source down"));
         when(openai.completeJson(anyString(), anyString())).thenReturn(
                 "{\"tags\":[{\"severity\":\"CRITICAL\",\"message\":\"x\",\"reason\":\"y\",\"suggestion\":\"z\",\"location\":\"a\"}]}");
 

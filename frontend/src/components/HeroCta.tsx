@@ -25,7 +25,7 @@ export function HeroCta() {
     warmUp();
   }, []);
   return (
-    <Link href={authed ? "/profile" : "/login"} className="btn btn-primary btn-lg">
+    <Link href={authed ? "/profile/" : "/login/"} className="btn btn-primary btn-lg">
       Analyze my resume
       <Icon name="arrow-right" className="h-4 w-4" />
     </Link>

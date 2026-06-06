@@ -9,12 +9,7 @@ variable "openai_api_key" {
   sensitive = true
 }
 
-variable "adzuna_app_id" {
-  type      = string
-  sensitive = true
-}
-
-variable "adzuna_app_key" {
+variable "jsearch_api_key" {
   type      = string
   sensitive = true
 }

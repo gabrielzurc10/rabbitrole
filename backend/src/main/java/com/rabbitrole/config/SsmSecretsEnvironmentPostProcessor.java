@@ -11,8 +11,8 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * Loads the OpenAI/Adzuna secrets from SSM Parameter Store into the Spring
- * Environment so {@code OpenAiClient}/{@code AdzunaClient} bind them unchanged.
+ * Loads the OpenAI/JSearch secrets from SSM Parameter Store into the Spring
+ * Environment so {@code OpenAiClient}/{@code JSearchClient} bind them unchanged.
  * Runs only under the aws profile (dev/prod on Lambda); locally the keys come
  * from the repo .env. Registered in META-INF/spring.factories so it runs before
  * bean creation, overriding the empty application.yml defaults.
@@ -33,8 +33,7 @@ public class SsmSecretsEnvironmentPostProcessor implements EnvironmentPostProces
         Map<String, Object> resolved = new LinkedHashMap<>();
         try (SsmClient ssm = SsmClient.create()) {
             resolved.put("openai.api-key", fetch(ssm, prefix + "/openai-api-key"));
-            resolved.put("adzuna.app-id", fetch(ssm, prefix + "/adzuna-app-id"));
-            resolved.put("adzuna.app-key", fetch(ssm, prefix + "/adzuna-app-key"));
+            resolved.put("jsearch.api-key", fetch(ssm, prefix + "/jsearch-api-key"));
         }
         // addFirst → highest precedence, so it wins over the yml placeholders.
         env.getPropertySources().addFirst(new MapPropertySource("ssm-secrets", resolved));

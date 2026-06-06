@@ -14,14 +14,8 @@ variable "openai_api_key" {
   sensitive   = true
 }
 
-variable "adzuna_app_id" {
-  description = "Adzuna app id."
-  type        = string
-  sensitive   = true
-}
-
-variable "adzuna_app_key" {
-  description = "Adzuna app key."
+variable "jsearch_api_key" {
+  description = "JSearch (RapidAPI) API key."
   type        = string
   sensitive   = true
 }
@@ -37,18 +31,6 @@ variable "google_client_secret" {
   type        = string
   default     = ""
   sensitive   = true
-}
-
-variable "db_min_capacity" {
-  description = "Aurora Serverless v2 minimum ACUs. 0 enables auto-pause to $0."
-  type        = number
-  default     = 0
-}
-
-variable "db_max_capacity" {
-  description = "Aurora Serverless v2 maximum ACUs."
-  type        = number
-  default     = 1
 }
 
 locals {

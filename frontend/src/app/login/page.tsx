@@ -5,9 +5,11 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Icon } from "@/components/ui/icon";
 import { Card, CardBody } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { ErrorAlert } from "@/components/ui/alert";
 import {
   handleRedirectCallback,
   isAuthenticated,
+  clearDemoSession,
   login,
   requestEmailCode,
   verifyEmailCode,
@@ -32,6 +34,17 @@ function LoginCard() {
     warmUp();
   }, []);
 
+  // Clicking "Continue with Google" sets busy=true then redirects to the Hosted UI.
+  // Pressing Back restores this page from the bfcache with busy still true, leaving
+  // the buttons stuck disabled — so re-enable the form on a bfcache restore.
+  useEffect(() => {
+    const onShow = (e: PageTransitionEvent) => {
+      if (e.persisted) setBusy(false);
+    };
+    window.addEventListener("pageshow", onShow);
+    return () => window.removeEventListener("pageshow", onShow);
+  }, []);
+
   // While exchanging the Google Hosted-UI ?code= (or resolving where to go next),
   // show a spinner instead of the form so the sign-in card doesn't flash.
   const exchanging = (params.has("code") || routing) && !error;
@@ -40,13 +53,14 @@ function LoginCard() {
   // users to the Jobs tab. We check the profile here; a new account gets a 204
   // (no profile yet) which getProfile() reports as null — no console error.
   const proceed = useCallback(async () => {
+    clearDemoSession(); // re-entering the app clears any demo "signed out" flag
     setRouting(true);
     try {
       const profile = await getProfile();
-      router.replace(profile ? "/jobs" : "/onboarding");
+      router.replace(profile ? "/jobs/" : "/onboarding/");
     } catch {
       // Network/cold-start hiccup: fall back to Jobs, which has its own gate.
-      router.replace("/jobs");
+      router.replace("/jobs/");
     }
   }, [router]);
 
@@ -222,7 +236,7 @@ function LoginCard() {
               </form>
             )}
 
-            {error && <p className="mt-4 text-center text-sm text-critical">{error}</p>}
+            {error && <ErrorAlert message={error} className="mt-4" />}
 
             <p className="mt-6 text-center text-xs text-muted-foreground">
               {isConfigured

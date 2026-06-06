@@ -2,11 +2,16 @@ package com.rabbitrole.jobs;
 
 import com.rabbitrole.common.CurrentUser;
 import com.rabbitrole.jobs.dto.Job;
+import com.rabbitrole.jobs.dto.ReasonRequest;
+import com.rabbitrole.jobs.dto.ReasonResponse;
 import com.rabbitrole.profiles.Profile;
 import com.rabbitrole.profiles.ProfileService;
 import com.rabbitrole.resume.ResumeService;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -25,13 +30,15 @@ public class JobController {
     private final JobService jobs;
     private final ResumeService resumes;
     private final ProfileService profiles;
+    private final JobReasoningService reasoning;
     private final CurrentUser currentUser;
 
-    public JobController(JobService jobs, ResumeService resumes,
-                         ProfileService profiles, CurrentUser currentUser) {
+    public JobController(JobService jobs, ResumeService resumes, ProfileService profiles,
+                         JobReasoningService reasoning, CurrentUser currentUser) {
         this.jobs = jobs;
         this.resumes = resumes;
         this.profiles = profiles;
+        this.reasoning = reasoning;
         this.currentUser = currentUser;
     }
 
@@ -61,5 +68,15 @@ public class JobController {
                 ? null
                 : resumes.extractedText(profile.resumeId(), userId);
         return ResponseEntity.ok(jobs.forProfile(profile, resumeText));
+    }
+
+    /**
+     * On-demand "why this match?" reasoning for a single posting. The caller sends
+     * the posting context (jobs aren't persisted); the resume is resolved from
+     * their profile, so the explanation only ever uses a resume they own.
+     */
+    @PostMapping("/reasoning")
+    public ReasonResponse reasoning(@Valid @RequestBody ReasonRequest request) {
+        return new ReasonResponse(reasoning.reason(request, currentUser.id()));
     }
 }

@@ -1,11 +1,13 @@
 package com.rabbitrole.resume;
 
 import com.rabbitrole.common.ApiException;
+import com.rabbitrole.resume.dto.ResumeFile;
 import com.rabbitrole.resume.dto.ResumeResponse;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -45,21 +47,51 @@ public class ResumeService {
             throw ApiException.badRequest("No text could be extracted from the resume.");
         }
 
-        // Stored for parity with the S3 flow; the key isn't surfaced yet.
-        storage.put(filename, bytes);
+        // Generate the id first so the file is stored under a deterministic key
+        // (resumes/{id}) we can reconstruct later to view/download it.
+        String id = UUID.randomUUID().toString();
+        storage.put(key(id), bytes);
 
-        Resume resume = repository.save(new Resume(
-                UUID.randomUUID().toString(),
-                userId,
-                filename,
-                contentType,
-                text));
+        Resume resume = repository.save(new Resume(id, userId, filename, contentType, text));
 
         return toResponse(resume);
     }
 
     public ResumeResponse get(String id, String userId) {
         return toResponse(require(id, userId));
+    }
+
+    /** The original file bytes (owner-checked) for inline viewing / download. */
+    public ResumeFile download(String id, String userId) {
+        Resume resume = require(id, userId);
+        return new ResumeFile(resume.filename(), resume.filetype(), storage.get(key(id)));
+    }
+
+    /**
+     * After a re-upload, drop the user's superseded resumes (file + row) — every
+     * one except the now-current {@code keepResumeId}. Callers must remove the
+     * dependent analyses first (FK), see {@code ProfileService}.
+     */
+    public void deleteOthers(String userId, String keepResumeId) {
+        for (String id : repository.idsByUserId(userId)) {
+            if (!id.equals(keepResumeId)) {
+                storage.delete(key(id));
+                repository.deleteById(id);
+            }
+        }
+    }
+
+    /** Erase every resume (file + row) for a user — used on account deletion. */
+    public void deleteAllForUser(String userId) {
+        for (String id : repository.idsByUserId(userId)) {
+            storage.delete(key(id));
+        }
+        repository.deleteByUserId(userId);
+    }
+
+    /** Storage key for a resume's original file. Single source of truth. */
+    private static String key(String resumeId) {
+        return "resumes/" + resumeId;
     }
 
     /** Raw extracted text for a resume — used by analysis + job matching. */

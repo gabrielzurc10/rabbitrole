@@ -24,13 +24,11 @@ openai:
   chat-model: gpt-4o-mini
   embedding-model: text-embedding-3-small
 
-adzuna:
-  app-id: ${ADZUNA_APP_ID:}
-  app-key: ${ADZUNA_APP_KEY:}
-  base-url: https://api.adzuna.com/v1/api
+# JSearch (RapidAPI) — live job postings. Key from .env locally, SSM in prod.
+jsearch:
+  api-key: ${JSEARCH_API_KEY:}
+  base-url: https://api.openwebninja.com/jsearch
   country: us
-  # How many live postings to pull for matching + RAG grounding.
-  results: 10
 
 ---
 # AWS profile: activated by the dev/prod groups above. Supplies the wiring the
@@ -50,9 +48,6 @@ spring:
 aws:
   resumes-bucket: ${RESUMES_BUCKET}
   ssm-prefix: ${SSM_PREFIX}
-  db:
-    cluster-arn: ${DB_CLUSTER_ARN}
-    secret-arn: ${DB_SECRET_ARN}
-    name: ${DB_NAME}
+  dynamo-table-prefix: ${DYNAMO_TABLE_PREFIX}
   cognito:
     user-pool-id: ${COGNITO_USER_POOL_ID}

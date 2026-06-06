@@ -1,7 +1,7 @@
 package com.rabbitrole.profiles.dto;
 
 import com.rabbitrole.profiles.CityPreference;
-import com.rabbitrole.profiles.WorkMode;
+import com.rabbitrole.profiles.EmploymentType;
 
 import java.time.Instant;
 import java.util.List;
@@ -10,7 +10,8 @@ import java.util.List;
 public record ProfileResponse(
         String fullName,
         List<String> targetRoles,
-        WorkMode workMode,
+        boolean remote,
+        List<EmploymentType> employmentTypes,
         List<CityPreference> cities,
         String resumeId,
         String analysisId,

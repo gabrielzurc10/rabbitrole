@@ -26,13 +26,13 @@ dependencies {
     // locally security is permit-all so the app runs without Cognito.
     implementation("org.springframework.boot:spring-boot-starter-oauth2-resource-server")
 
-    // Loads the repo-root .env into the Spring Environment (OpenAI/Adzuna keys).
+    // Loads the repo-root .env into the Spring Environment (OpenAI/JSearch keys).
     implementation("me.paulschwarz:spring-dotenv:4.0.0")
 
-    // AWS access (aws profile only): Aurora via the RDS Data API, S3 for resume
-    // files, SSM for secrets. Keeps Lambda out of the VPC — see CLAUDE.md.
+    // AWS access (aws profile only): DynamoDB for app data, S3 for resume files,
+    // SSM for secrets. All are VPC-less AWS APIs — Lambda stays out of a VPC.
     implementation(platform("software.amazon.awssdk:bom:2.28.16"))
-    implementation("software.amazon.awssdk:rdsdata")
+    implementation("software.amazon.awssdk:dynamodb")
     implementation("software.amazon.awssdk:s3")
     implementation("software.amazon.awssdk:ssm")
     // Account deletion removes the Cognito user (AdminDeleteUser).

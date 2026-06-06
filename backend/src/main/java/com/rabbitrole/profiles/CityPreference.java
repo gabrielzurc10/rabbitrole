@@ -1,15 +1,13 @@
 package com.rabbitrole.profiles;
 
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Positive;
 
 /**
- * A place the user will commute to: city + state and how far they'll travel.
- * Stored inside the profile's {@code cities} jsonb; {@code distanceMiles} feeds
- * Adzuna's distance filter when matching jobs.
+ * A place the user will work: city + state. Stored inside the profile's
+ * {@code cities} jsonb; scopes the job search at city/metro level (JSearch has no
+ * radius, so there's no commute-distance preference).
  */
 public record CityPreference(
         @NotBlank String city,
-        @NotBlank String state,
-        @Positive int distanceMiles) {
+        @NotBlank String state) {
 }

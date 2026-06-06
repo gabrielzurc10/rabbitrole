@@ -3,34 +3,50 @@
 import { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
 import { Icon } from "@/components/ui/icon";
+import { cn } from "@/lib/cn";
 
 const ORDER = ["system", "light", "dark"] as const;
-const ICON: Record<string, string> = {
+const ICON: Record<(typeof ORDER)[number], string> = {
   system: "monitor",
   light: "sun",
   dark: "moon",
 };
+const LABEL: Record<(typeof ORDER)[number], string> = {
+  system: "System theme",
+  light: "Light theme",
+  dark: "Dark theme",
+};
 
-/** Cycles System → Light → Dark. Waits to mount to avoid hydration mismatch. */
+/**
+ * Inline segmented theme picker — System / Light / Dark, all visible, one click
+ * to switch. Waits to mount before marking the active segment, since the resolved
+ * theme is only known on the client (standard next-themes hydration guard).
+ */
 export function ThemeToggle() {
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
-  // Standard next-themes pattern: we only know the resolved theme after mount,
-  // so render a stable placeholder on the server/first paint.
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => setMounted(true), []);
 
   const current = (theme ?? "system") as (typeof ORDER)[number];
-  const next = ORDER[(ORDER.indexOf(current) + 1) % ORDER.length];
 
   return (
-    <button
-      type="button"
-      className="btn btn-ghost btn-icon"
-      aria-label={`Theme: ${current}. Switch to ${next}.`}
-      onClick={() => setTheme(next)}
-    >
-      {mounted ? <Icon name={ICON[current]} /> : <Icon name="monitor" />}
-    </button>
+    <div className="theme-switch" role="group" aria-label="Theme">
+      {ORDER.map((mode) => {
+        const active = mounted && current === mode;
+        return (
+          <button
+            key={mode}
+            type="button"
+            className={cn("theme-switch-btn", active && "theme-switch-btn-active")}
+            aria-label={LABEL[mode]}
+            aria-pressed={active}
+            onClick={() => setTheme(mode)}
+          >
+            <Icon name={ICON[mode]} className="h-4 w-4" />
+          </button>
+        );
+      })}
+    </div>
   );
 }

@@ -1,41 +1,69 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardBody } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
+import { ErrorAlert } from "@/components/ui/alert";
 import { ResumeUploader } from "@/components/ResumeUploader";
 import { RoleChipInput } from "@/components/RoleChipInput";
-import { WorkModeSelector } from "@/components/WorkModeSelector";
+import { RemoteToggle } from "@/components/RemoteToggle";
+import { EmploymentTypeSelector, EMPLOYMENT_LABELS } from "@/components/EmploymentTypeSelector";
 import { CityProximityEditor } from "@/components/CityProximityEditor";
 import { Stepper } from "@/components/Stepper";
-import { setOnboardingDraft } from "@/lib/onboardingDraft";
+import { peekProfile } from "@/lib/api";
+import { setOnboardingDraft, takeAnalyzeError } from "@/lib/onboardingDraft";
 import { useRequireAuth } from "@/lib/useRequireAuth";
-import type { CityPreference, WorkMode } from "@/types";
+import type { CityPreference, EmploymentType } from "@/types";
 
-const STEPS = ["Name", "Resume", "Roles", "Location", "Review"];
+const STEPS = ["Name", "Resume", "Roles", "Preferences", "Review"];
 
 export default function OnboardingPage() {
   const router = useRouter();
   useRequireAuth(); // redirect to /login if there's no live session (e.g. via Back)
   const [step, setStep] = useState(1);
 
+  // If analysis just failed, /analyzing sent us back here with a one-shot message.
+  // Read after mount (it's a browser-only value) to keep the static export hydration clean.
+  const [analyzeError, setAnalyzeError] = useState<string | null>(null);
+  useEffect(() => {
+    const message = takeAnalyzeError();
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- one-shot mount read
+    if (message) setAnalyzeError(message);
+  }, []);
+
+  // The one-time wizard shouldn't be re-enterable once completed: a returning user
+  // (profile already cached) who lands here via Back is sent to their profile.
+  useEffect(() => {
+    const guard = () => {
+      if (peekProfile()) router.replace("/profile/");
+    };
+    guard();
+    const onShow = (e: PageTransitionEvent) => {
+      if (e.persisted) guard();
+    };
+    window.addEventListener("pageshow", onShow);
+    return () => window.removeEventListener("pageshow", onShow);
+  }, [router]);
+
   const [fullName, setFullName] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [roles, setRoles] = useState<string[]>([]);
-  const [workMode, setWorkMode] = useState<WorkMode | null>(null);
+  const [remote, setRemote] = useState<boolean>(false);
+  const [employmentTypes, setEmploymentTypes] = useState<EmploymentType[]>([]);
   const [cities, setCities] = useState<CityPreference[]>([]);
 
-  const needsCities = workMode === "in-person" || workMode === "hybrid";
-  const citiesValid =
-    !needsCities || (cities.length > 0 && cities.every((c) => c.city.trim() && c.state.trim()));
+  // Remote postings are location-agnostic, so cities only apply for a non-remote search.
+  // No cities = "all locations" (allowed); any city that IS added must be filled in.
+  const needsCities = !remote;
+  const citiesValid = !needsCities || cities.every((c) => c.city.trim() && c.state.trim());
 
   const stepValid =
     step === 1 ? fullName.trim().length > 0
     : step === 2 ? file !== null
     : step === 3 ? roles.length > 0
-    : step === 4 ? workMode !== null && citiesValid
+    : step === 4 ? citiesValid
     : true;
 
   function next() {
@@ -43,17 +71,19 @@ export default function OnboardingPage() {
   }
 
   function start() {
-    if (!file || !workMode) return;
+    if (!file) return;
     setOnboardingDraft({
       profile: {
         fullName: fullName.trim(),
         targetRoles: roles,
-        workMode,
+        remote,
+        employmentTypes,
         cities: needsCities ? cities : [],
       },
       file,
+      origin: "/onboarding/",
     });
-    router.push("/analyzing");
+    router.replace("/analyzing/");
   }
 
   return (
@@ -63,6 +93,12 @@ export default function OnboardingPage() {
         <p className="mt-1 text-muted-foreground">
           A few quick steps so we can tailor your review and job matches.
         </p>
+
+        {analyzeError && (
+          <div className="mt-4">
+            <ErrorAlert message={analyzeError} />
+          </div>
+        )}
 
         <div className="mt-6">
           <Stepper steps={STEPS} current={step} />
@@ -109,14 +145,18 @@ export default function OnboardingPage() {
               <div className="space-y-5">
                 <div>
                   <label className="label">How do you want to work?</label>
-                  <WorkModeSelector value={workMode} onChange={setWorkMode} />
+                  <RemoteToggle value={remote} onChange={setRemote} />
                 </div>
                 {needsCities && (
                   <div>
-                    <label className="label">Where? Add cities and how far you&apos;ll commute.</label>
+                    <label className="label">Where do you want to work? Add cities.</label>
                     <CityProximityEditor value={cities} onChange={setCities} />
                   </div>
                 )}
+                <div>
+                  <label className="label">Employment type (optional — pick any)</label>
+                  <EmploymentTypeSelector value={employmentTypes} onChange={setEmploymentTypes} />
+                </div>
               </div>
             )}
 
@@ -125,7 +165,8 @@ export default function OnboardingPage() {
                 fullName={fullName}
                 fileName={file?.name ?? ""}
                 roles={roles}
-                workMode={workMode}
+                remote={remote}
+                employmentTypes={employmentTypes}
                 cities={needsCities ? cities : []}
               />
             )}
@@ -161,31 +202,34 @@ function Review({
   fullName,
   fileName,
   roles,
-  workMode,
+  remote,
+  employmentTypes,
   cities,
 }: {
   fullName: string;
   fileName: string;
   roles: string[];
-  workMode: WorkMode | null;
+  remote: boolean;
+  employmentTypes: EmploymentType[];
   cities: CityPreference[];
 }) {
-  const WORK_LABEL: Record<WorkMode, string> = {
-    "in-person": "In-person",
-    hybrid: "Hybrid",
-    remote: "Remote",
-  };
   return (
     <div className="space-y-4">
       <h2 className="card-title">Review</h2>
       <ReviewRow label="Name" value={fullName} />
       <ReviewRow label="Resume" value={fileName} />
       <ReviewRow label="Roles" value={roles.join(", ")} />
-      <ReviewRow label="Work mode" value={workMode ? WORK_LABEL[workMode] : ""} />
+      <ReviewRow label="Work mode" value={remote ? "Remote eligible" : "On-site / local"} />
+      {employmentTypes.length > 0 && (
+        <ReviewRow
+          label="Employment"
+          value={employmentTypes.map((t) => EMPLOYMENT_LABELS[t]).join(", ")}
+        />
+      )}
       {cities.length > 0 && (
         <ReviewRow
           label="Locations"
-          value={cities.map((c) => `${c.city}, ${c.state} (≤${c.distanceMiles}mi)`).join(" · ")}
+          value={cities.map((c) => `${c.city}, ${c.state}`).join(" · ")}
         />
       )}
     </div>

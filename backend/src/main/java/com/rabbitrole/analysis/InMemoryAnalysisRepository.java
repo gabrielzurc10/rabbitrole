@@ -9,7 +9,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * In-memory {@link AnalysisRepository} so the service runs without a database.
- * Default for local + tests; {@link RdsDataAnalysisRepository} takes over on aws.
+ * Default for local + tests; {@link DynamoAnalysisRepository} takes over on aws.
  */
 @Repository
 @Profile("!aws")
@@ -26,6 +26,11 @@ public class InMemoryAnalysisRepository implements AnalysisRepository {
     @Override
     public Optional<Analysis> findById(String id) {
         return Optional.ofNullable(store.get(id));
+    }
+
+    @Override
+    public void deleteByUserIdExcept(String userId, String keepId) {
+        store.values().removeIf(a -> userId.equals(a.userId()) && !a.id().equals(keepId));
     }
 
     @Override

@@ -1,17 +1,19 @@
 package com.rabbitrole.resume;
 
+import com.rabbitrole.common.ApiException;
 import com.rabbitrole.config.AwsProperties;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
-import java.util.UUID;
-
 /**
- * S3-backed {@link S3Storage}: persists the original upload under a unique key
- * and returns it. Replaces {@link LocalStorage} under the aws profile.
+ * S3-backed {@link S3Storage}: persists/reads/deletes the original upload under
+ * a caller-supplied key. Replaces {@link LocalStorage} under the aws profile.
  */
 @Component
 @Profile("aws")
@@ -26,11 +28,25 @@ public class AwsS3Storage implements S3Storage {
     }
 
     @Override
-    public String put(String filename, byte[] bytes) {
-        String key = "resumes/" + UUID.randomUUID() + "/" + filename;
+    public void put(String key, byte[] bytes) {
         s3.putObject(
                 PutObjectRequest.builder().bucket(bucket).key(key).build(),
                 RequestBody.fromBytes(bytes));
-        return key;
+    }
+
+    @Override
+    public byte[] get(String key) {
+        try {
+            return s3.getObjectAsBytes(
+                    GetObjectRequest.builder().bucket(bucket).key(key).build()).asByteArray();
+        } catch (NoSuchKeyException e) {
+            // e.g. a resume uploaded before file storage tracked keys — no file to serve.
+            throw ApiException.notFound("This resume's file isn't available. Re-upload it to view.");
+        }
+    }
+
+    @Override
+    public void delete(String key) {
+        s3.deleteObject(DeleteObjectRequest.builder().bucket(bucket).key(key).build());
     }
 }

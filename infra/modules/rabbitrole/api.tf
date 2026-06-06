@@ -1,5 +1,5 @@
 # Backend: ECR image -> Lambda (container) -> API Gateway HTTP API.
-# Lambda runs OUTSIDE the VPC and reaches Aurora via the RDS Data API.
+# Lambda runs OUTSIDE any VPC and reaches DynamoDB/S3/SSM over AWS's public APIs.
 
 resource "aws_ecr_repository" "backend" {
   name         = "${local.name}-backend"
@@ -34,20 +34,26 @@ resource "aws_iam_role_policy_attachment" "lambda_basic" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
-# Runtime permissions: Data API to Aurora, read its Secrets Manager password,
-# read SSM secrets, and presign/fetch resumes in S3.
+# Runtime permissions: DynamoDB app data (tables + their GSIs), read SSM secrets,
+# and put/get/delete resumes in S3.
 data "aws_iam_policy_document" "lambda_runtime" {
   statement {
-    sid       = "DataApi"
-    effect    = "Allow"
-    actions   = ["rds-data:*"]
-    resources = [aws_rds_cluster.main.arn]
-  }
-  statement {
-    sid       = "DbSecret"
-    effect    = "Allow"
-    actions   = ["secretsmanager:GetSecretValue"]
-    resources = [aws_rds_cluster.main.master_user_secret[0].secret_arn]
+    sid    = "DynamoDb"
+    effect = "Allow"
+    actions = [
+      "dynamodb:GetItem",
+      "dynamodb:PutItem",
+      "dynamodb:Query",
+      "dynamodb:DeleteItem",
+      "dynamodb:BatchWriteItem",
+    ]
+    resources = [
+      aws_dynamodb_table.profiles.arn,
+      aws_dynamodb_table.resumes.arn,
+      aws_dynamodb_table.analyses.arn,
+      "${aws_dynamodb_table.resumes.arn}/index/*",
+      "${aws_dynamodb_table.analyses.arn}/index/*",
+    ]
   }
   statement {
     sid     = "SsmSecrets"
@@ -60,7 +66,9 @@ data "aws_iam_policy_document" "lambda_runtime" {
   statement {
     sid       = "Resumes"
     effect    = "Allow"
-    actions   = ["s3:PutObject", "s3:GetObject"]
+    # Put = upload, Get = view/download, Delete = prune superseded files on
+    # re-upload and erase files on account deletion.
+    actions   = ["s3:PutObject", "s3:GetObject", "s3:DeleteObject"]
     resources = ["${aws_s3_bucket.resumes.arn}/*"]
   }
   # Account deletion (find user by sub, remove) + passwordless sign-up
@@ -104,9 +112,7 @@ resource "aws_lambda_function" "backend" {
   environment {
     variables = {
       SPRING_PROFILES_ACTIVE = var.env
-      DB_CLUSTER_ARN         = aws_rds_cluster.main.arn
-      DB_SECRET_ARN          = aws_rds_cluster.main.master_user_secret[0].secret_arn
-      DB_NAME                = aws_rds_cluster.main.database_name
+      DYNAMO_TABLE_PREFIX    = local.name
       RESUMES_BUCKET         = aws_s3_bucket.resumes.id
       SSM_PREFIX             = "/rabbitrole/${var.env}"
       COGNITO_ISSUER_URI     = local.cognito_issuer

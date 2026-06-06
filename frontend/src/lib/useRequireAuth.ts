@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { isAuthenticated } from "@/lib/auth";
 
 /**
@@ -19,7 +18,6 @@ import { isAuthenticated } from "@/lib/auth";
  * this never redirects locally.
  */
 export function useRequireAuth(): boolean {
-  const router = useRouter();
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -28,7 +26,11 @@ export function useRequireAuth(): boolean {
         setReady(true);
       } else {
         setReady(false);
-        router.replace("/login");
+        // Hard redirect, NOT router.replace: after sign-out + Back, the page can be
+        // restored from the bfcache with a stale Next router where a client-side
+        // navigation silently no-ops. A full-page replace always evicts it (and
+        // doesn't grow history).
+        window.location.replace("/login/");
       }
     };
     check();
@@ -39,7 +41,7 @@ export function useRequireAuth(): boolean {
     };
     window.addEventListener("pageshow", onShow);
     return () => window.removeEventListener("pageshow", onShow);
-  }, [router]);
+  }, []);
 
   return ready;
 }

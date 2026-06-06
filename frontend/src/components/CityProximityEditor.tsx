@@ -4,9 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import type { CityPreference } from "@/types";
 
-const DISTANCES = [10, 25, 50, 100];
-
-/** Editable list of cities (city + state) each with a commute radius. */
+/** Editable list of work locations (city + state). JSearch scopes by city/metro. */
 export function CityProximityEditor({
   value,
   onChange,
@@ -20,6 +18,11 @@ export function CityProximityEditor({
 
   return (
     <div className="space-y-2">
+      {value.length === 0 && (
+        <p className="text-sm text-muted-foreground">
+          All locations — add a city to narrow your search.
+        </p>
+      )}
       {value.map((c, i) => (
         <div key={i} className="city-row">
           <div className="min-w-[8rem] flex-1">
@@ -41,20 +44,6 @@ export function CityProximityEditor({
               onChange={(e) => update(i, { state: e.target.value.toUpperCase() })}
             />
           </div>
-          <div className="w-32">
-            <label className="label">Within</label>
-            <select
-              className="select"
-              value={c.distanceMiles}
-              onChange={(e) => update(i, { distanceMiles: Number(e.target.value) })}
-            >
-              {DISTANCES.map((d) => (
-                <option key={d} value={d}>
-                  {d} miles
-                </option>
-              ))}
-            </select>
-          </div>
           <Button
             type="button"
             variant="ghost"
@@ -71,7 +60,7 @@ export function CityProximityEditor({
         type="button"
         variant="outline"
         size="sm"
-        onClick={() => onChange([...value, { city: "", state: "", distanceMiles: 25 }])}
+        onClick={() => onChange([...value, { city: "", state: "" }])}
       >
         <Icon name="plus" className="h-4 w-4" />
         Add city
