@@ -69,7 +69,9 @@ public class JSearchClient {
                                                List<EmploymentType> employmentTypes) {
         String query = (where == null || where.isBlank()) ? role : role + " in " + where;
         // JSearch's native type filter: comma-separated enum values (e.g. "CONTRACTOR,PARTTIME").
-        // Null when none picked so the param is omitted entirely ("any type").
+        // Null when none picked so the param is omitted entirely ("any type"). NOTE: the
+        // REQUEST param is `employment_types`; `job_employment_types` is the RESPONSE field
+        // and is silently ignored as a query param (returns full-time-dominated defaults).
         String types = (employmentTypes == null || employmentTypes.isEmpty()) ? null
                 : employmentTypes.stream().map(EmploymentType::apiValue).collect(Collectors.joining(","));
 
@@ -88,7 +90,7 @@ public class JSearchClient {
                                     // (the latter is silently ignored on /search).
                                     .queryParam("work_from_home", remoteOnly);
                             if (types != null) {
-                                uriBuilder.queryParam("job_employment_types", types);
+                                uriBuilder.queryParam("employment_types", types);
                             }
                             return uriBuilder.build();
                         })
