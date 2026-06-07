@@ -3,6 +3,7 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { Icon } from "@/components/ui/icon";
 import { isAuthenticated, logout } from "@/lib/auth";
 
 // localStorage isn't reactive; we re-read auth on each route change instead
@@ -10,16 +11,16 @@ import { isAuthenticated, logout } from "@/lib/auth";
 const noopSubscribe = () => () => {};
 
 /**
- * Navbar sign-in / sign-out control. Uses the same `isAuthenticated()` notion as
- * the nav tabs + landing CTA, so it stays in sync (incl. demo mode, where the app
- * treats you as signed in). Hidden on /login — you're mid sign-in there, so a nav
- * button would be redundant.
+ * Navbar sign-in control. Shows "Sign in" when signed out. Signing OUT normally lives
+ * on the profile page, so this renders nothing once signed in — EXCEPT during onboarding,
+ * where there's no profile page yet, so it surfaces "Sign out" so a mid-onboarding user
+ * can still get out. Uses the same `isAuthenticated()` notion as the nav tabs + landing
+ * CTA (incl. demo mode). Hidden on /login — you're mid sign-in there.
  *
- * The site is a static export built signed-out, so the prerendered HTML contains
- * a "Sign in" button. On refresh the browser paints that before JS reads
- * localStorage and flips it to "Sign out" — a visible flash. The `mounted` gate
- * holds a neutral, space-reserving placeholder until the real auth state is known,
- * so the wrong button never shows.
+ * The site is a static export built signed-out, so the prerendered HTML contains a
+ * "Sign in" button. On refresh the browser paints that before JS reads localStorage — a
+ * visible flash. The `mounted` gate holds a neutral, space-reserving placeholder until
+ * the real auth state is known, so the wrong button never shows.
  */
 export function AuthButton() {
   const pathname = usePathname();
@@ -44,12 +45,21 @@ export function AuthButton() {
     );
   }
 
+  // Signed in: sign-out lives on the profile page, so the navbar shows nothing —
+  // unless we're in onboarding, which has no profile page yet.
   if (signedIn) {
-    return (
-      <button className="btn btn-ghost btn-sm" onClick={() => logout()}>
-        Sign out
-      </button>
-    );
+    if (pathname.startsWith("/onboarding")) {
+      return (
+        <button
+          className="btn btn-sm text-muted-foreground hover:text-foreground"
+          onClick={() => logout()}
+        >
+          <Icon name="log-out" className="h-4 w-4" />
+          Sign out
+        </button>
+      );
+    }
+    return null;
   }
   return (
     <Link href="/login/" className="btn btn-primary btn-sm">

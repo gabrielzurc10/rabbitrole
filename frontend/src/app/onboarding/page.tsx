@@ -13,6 +13,7 @@ import { EmploymentTypeSelector, EMPLOYMENT_LABELS } from "@/components/Employme
 import { CityProximityEditor } from "@/components/CityProximityEditor";
 import { Stepper } from "@/components/Stepper";
 import { peekProfile } from "@/lib/api";
+import { titleCase } from "@/lib/text";
 import { setOnboardingDraft, takeAnalyzeError } from "@/lib/onboardingDraft";
 import { useRequireAuth } from "@/lib/useRequireAuth";
 import type { CityPreference, EmploymentType } from "@/types";
@@ -74,7 +75,7 @@ export default function OnboardingPage() {
     if (!file) return;
     setOnboardingDraft({
       profile: {
-        fullName: fullName.trim(),
+        fullName: titleCase(fullName.trim()),
         targetRoles: roles,
         remote,
         employmentTypes,
@@ -114,9 +115,10 @@ export default function OnboardingPage() {
                 <input
                   id="fullName"
                   className="input"
-                  placeholder="Ada Lovelace"
+                  placeholder="Enter full name"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
+                  onBlur={() => setFullName(titleCase(fullName))}
                   autoFocus
                 />
               </div>
@@ -124,10 +126,7 @@ export default function OnboardingPage() {
 
             {step === 2 && (
               <div>
-                <ResumeUploader onFile={setFile} />
-                {file && (
-                  <p className="mt-2 text-xs text-muted-foreground">Selected: {file.name}</p>
-                )}
+                <ResumeUploader onFile={setFile} centered fileName={file?.name} />
               </div>
             )}
 
@@ -176,9 +175,11 @@ export default function OnboardingPage() {
         <div className="mt-4 flex items-center justify-between">
           <Button
             variant="ghost"
+            className="text-muted-foreground hover:bg-transparent hover:text-foreground"
             onClick={() => setStep(step - 1)}
             disabled={step === 1}
           >
+            <Icon name="arrow-left" className="h-4 w-4" />
             Back
           </Button>
           {step < STEPS.length ? (

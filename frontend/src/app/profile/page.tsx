@@ -9,14 +9,12 @@ import { Dialog } from "@/components/ui/dialog";
 import { ErrorAlert } from "@/components/ui/alert";
 import { Toast } from "@/components/ui/toast";
 import { ProfileSkeleton } from "@/components/Skeleton";
-import { ResumeCard } from "@/components/ResumeCard";
-import { ResumeUploader } from "@/components/ResumeUploader";
-import { PreferenceFields } from "@/components/PreferenceFields";
-import { getProfile, peekProfile, getResume, peekResume, saveProfile, deleteAccount, ApiError } from "@/lib/api";
-import { setOnboardingDraft, takeAnalyzeError } from "@/lib/onboardingDraft";
-import { logout } from "@/lib/auth";
+import { ThemeToggle } from "@/components/theme/ThemeToggle";
+import { getProfile, peekProfile, saveProfile, deleteAccount, ApiError } from "@/lib/api";
+import { logout, getEmail } from "@/lib/auth";
+import { titleCase } from "@/lib/text";
 import { useRequireAuth } from "@/lib/useRequireAuth";
-import type { CityPreference, EmploymentType, Profile } from "@/types";
+import type { Profile } from "@/types";
 
 // Flips true after this tab's first mount. Module-scoped (survives remounts) so a
 // client-side tab switch can seed from the cache instantly, while the very first
@@ -29,36 +27,28 @@ export default function ProfilePage() {
   const router = useRouter();
   const ready = useRequireAuth();
   // Seed from the cache so switching back to this tab shows the profile instantly,
-  // with no refetch or skeleton flash — but only once past the initial hydration
-  // (see `hydrated` above); a full refresh starts from the skeleton. On a full
-  // reload getProfile() still returns the cache (no network), so no /onboarding bounce.
+  // with no refetch or skeleton flash — but only once past the initial hydration.
   const cached = hydrated ? (peekProfile() ?? null) : null;
 
   const [profile, setProfile] = useState<Profile | null>(cached);
   const [loadError, setLoadError] = useState<string | null>(null);
 
-  // Editable copy of the preferences.
   const [fullName, setFullName] = useState(cached?.fullName ?? "");
-  const [roles, setRoles] = useState<string[]>(cached?.targetRoles ?? []);
-  const [remote, setRemote] = useState<boolean>(cached?.remote ?? false);
-  const [employmentTypes, setEmploymentTypes] = useState<EmploymentType[]>(
-    cached?.employmentTypes ?? [],
-  );
-  const [cities, setCities] = useState<CityPreference[]>(cached?.cities ?? []);
-
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [savedToast, setSavedToast] = useState(false);
 
-  // If a re-analyze just failed, /analyzing sent us back here with a one-shot message.
-  // Read after mount (it's a browser-only value) to keep the static export hydration clean.
-  const [analyzeError, setAnalyzeError] = useState<string | null>(null);
+  // Email comes from the ID token (browser-only), so read it after mount to keep the
+  // static-export hydration clean.
+  const [email, setEmail] = useState<string | null>(null);
   useEffect(() => {
-    const message = takeAnalyzeError();
     // eslint-disable-next-line react-hooks/set-state-in-effect -- one-shot mount read
-    if (message) setAnalyzeError(message);
+    setEmail(getEmail());
   }, []);
+
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [signOutOpen, setSignOutOpen] = useState(false);
 
   useEffect(() => {
     hydrated = true;
@@ -72,25 +62,9 @@ export default function ProfilePage() {
         }
         setProfile(p);
         setFullName(p.fullName);
-        setRoles(p.targetRoles);
-        setRemote(p.remote);
-        setEmploymentTypes(p.employmentTypes);
-        setCities(p.cities);
       })
       .catch((e) => setLoadError(e instanceof ApiError ? e.message : "Could not load your profile."));
   }, [ready, router, profile]);
-
-  // Hold the full skeleton until the resume metadata is loaded too, so the resume
-  // card never flashes a half-loaded state (it's seeded from this same cache).
-  const resumeId = profile?.resumeId;
-  const resumeCached = !resumeId || peekResume(resumeId) != null;
-  const [resumeFetched, setResumeFetched] = useState(false);
-  useEffect(() => {
-    if (!resumeId || peekResume(resumeId)) return; // nothing to fetch
-    getResume(resumeId)
-      .catch(() => {}) // a miss isn't fatal — the card handles it
-      .finally(() => setResumeFetched(true));
-  }, [resumeId]);
 
   if (loadError) {
     return (
@@ -101,7 +75,7 @@ export default function ProfilePage() {
       </div>
     );
   }
-  if (!profile || !(resumeCached || resumeFetched)) {
+  if (!profile) {
     return (
       <div className="page">
         <ProfileSkeleton />
@@ -109,54 +83,15 @@ export default function ProfilePage() {
     );
   }
 
-  // Remote postings are location-agnostic, so cities only apply (and are validated)
-  // for a non-remote search. No cities = "all locations"; any city added must be filled.
-  const needsCities = !remote;
-  const citiesValid = !needsCities || cities.every((c) => c.city.trim() && c.state.trim());
-  const valid = fullName.trim().length > 0 && roles.length > 0 && citiesValid;
-
-  // Enable Save only when the editable fields actually differ from what's saved.
-  // Type order doesn't matter (sorted); roles + cities are order-sensitive.
-  const signature = (p: {
-    fullName: string;
-    targetRoles: string[];
-    remote: boolean;
-    employmentTypes: EmploymentType[];
-    cities: CityPreference[];
-  }) =>
-    JSON.stringify([
-      p.fullName,
-      p.targetRoles,
-      p.remote,
-      [...p.employmentTypes].sort(),
-      p.cities,
-    ]);
-  const dirty =
-    signature({
-      fullName: fullName.trim(),
-      targetRoles: roles,
-      remote,
-      employmentTypes,
-      cities: needsCities ? cities : [],
-    }) !== signature(profile);
-  const canSave = valid && dirty;
-
-  function prefs(): Profile {
-    return {
-      ...(profile as Profile),
-      fullName: fullName.trim(),
-      targetRoles: roles,
-      remote,
-      employmentTypes,
-      cities: needsCities ? cities : [],
-    };
-  }
+  const canSave =
+    fullName.trim().length > 0 && titleCase(fullName.trim()) !== profile.fullName;
 
   async function save() {
     setSaving(true);
     setSaveError(null);
     try {
-      const updated = await saveProfile(prefs());
+      // Spread the existing profile so preferences (roles/cities/etc.) are untouched.
+      const updated = await saveProfile({ ...(profile as Profile), fullName: titleCase(fullName.trim()) });
       setProfile(updated);
       setSavedToast(true);
     } catch {
@@ -166,16 +101,13 @@ export default function ProfilePage() {
     }
   }
 
-  function reAnalyze(file: File) {
-    setOnboardingDraft({ profile: prefs(), file, origin: "/profile/" });
-    router.replace("/analyzing/");
-  }
-
   async function confirmDelete() {
+    setDeleting(true);
     try {
       await deleteAccount();
-      logout(); // clears tokens + redirects
+      logout(); // clears tokens + redirects (keeps the spinner up through the redirect)
     } catch {
+      setDeleting(false);
       setSaveError("An error has occurred. Please try again.");
       setDeleteOpen(false);
     }
@@ -184,55 +116,41 @@ export default function ProfilePage() {
   return (
     <div className="page">
       <div className="mx-auto max-w-2xl space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold uppercase tracking-tight">{profile.fullName}</h1>
-          <p className="mt-1 text-muted-foreground">Your profile and resume score.</p>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-bold uppercase tracking-tight">{profile.fullName}</h1>
+            <p className="mt-1 text-muted-foreground">Your account settings.</p>
+          </div>
+          <Button variant="outline" onClick={() => setSignOutOpen(true)}>
+            <Icon name="log-out" className="h-4 w-4" />
+            Sign out
+          </Button>
         </div>
 
-        {analyzeError && <ErrorAlert message={analyzeError} />}
-
-        {/* Resume score + file (view / download / full review) */}
-        <ResumeCard
-          resumeId={profile.resumeId}
-          score={profile.score ?? 0}
-          role={profile.targetRoles[0]}
-          analysisId={profile.analysisId}
-        />
-
-        {/* Re-analyze */}
-        <Card>
-          <CardBody className="space-y-3">
-            <CardTitle>Update your resume</CardTitle>
-            <CardSubtitle>Upload a new version to re-score it.</CardSubtitle>
-            <ResumeUploader onFile={reAnalyze} />
-          </CardBody>
-        </Card>
-
-        {/* Editable preferences */}
+        {/* Account */}
         <Card>
           <CardBody className="space-y-5">
-            <CardTitle>Preferences</CardTitle>
+            <CardTitle>Account</CardTitle>
 
             <div>
               <label htmlFor="name" className="label">Full name</label>
               <input
                 id="name"
                 className="input"
+                placeholder="Enter full name"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
+                onBlur={() => setFullName(titleCase(fullName))}
               />
             </div>
 
-            <PreferenceFields
-              roles={roles}
-              onRolesChange={setRoles}
-              remote={remote}
-              onRemoteChange={setRemote}
-              cities={cities}
-              onCitiesChange={setCities}
-              employmentTypes={employmentTypes}
-              onEmploymentTypesChange={setEmploymentTypes}
-            />
+            <div>
+              <label className="label">Email</label>
+              <p className="flex h-10 items-center gap-2 text-sm text-muted-foreground">
+                <Icon name="mail" className="h-4 w-4 shrink-0 text-primary" />
+                {email ?? "—"}
+              </p>
+            </div>
 
             <div className="space-y-3">
               <Button onClick={save} disabled={!canSave || saving}>
@@ -240,6 +158,17 @@ export default function ProfilePage() {
               </Button>
               {saveError && <ErrorAlert message={saveError} />}
             </div>
+          </CardBody>
+        </Card>
+
+        {/* Appearance */}
+        <Card>
+          <CardBody className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <CardTitle>Appearance</CardTitle>
+              <CardSubtitle className="mt-1">Choose your theme.</CardSubtitle>
+            </div>
+            <ThemeToggle />
           </CardBody>
         </Card>
 
@@ -266,11 +195,39 @@ export default function ProfilePage() {
           This permanently deletes your profile, resume, and all analyses. This can&apos;t be undone.
         </p>
         <div className="mt-6 flex justify-end gap-2">
-          <Button variant="ghost" onClick={() => setDeleteOpen(false)}>
+          <Button variant="ghost" onClick={() => setDeleteOpen(false)} disabled={deleting}>
             Cancel
           </Button>
-          <Button className="bg-critical text-white hover:opacity-90" onClick={confirmDelete}>
-            Delete everything
+          <Button
+            // bg-none drops btn-primary's gradient so the critical background shows.
+            className="bg-none bg-critical text-white hover:bg-critical/90"
+            onClick={confirmDelete}
+            disabled={deleting}
+          >
+            {deleting ? (
+              <>
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                Deleting…
+              </>
+            ) : (
+              "Delete everything"
+            )}
+          </Button>
+        </div>
+      </Dialog>
+
+      <Dialog open={signOutOpen} onClose={() => setSignOutOpen(false)}>
+        <h2 className="text-lg font-semibold">Sign out?</h2>
+        <p className="mt-2 text-sm text-muted-foreground">
+          You&apos;ll need to sign back in to see your matches and review.
+        </p>
+        <div className="mt-6 flex justify-end gap-2">
+          <Button variant="ghost" onClick={() => setSignOutOpen(false)}>
+            Cancel
+          </Button>
+          <Button onClick={() => logout()}>
+            <Icon name="log-out" className="h-4 w-4" />
+            Sign out
           </Button>
         </div>
       </Dialog>

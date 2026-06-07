@@ -9,10 +9,12 @@
     @apply mx-auto w-full max-w-5xl px-4 py-10 sm:px-6 lg:px-8;
   }
   .navbar {
-    @apply sticky top-0 z-40 w-full border-b border-border bg-background/80 backdrop-blur;
+    @apply sticky top-0 z-40 w-full bg-background;
   }
   .navbar-inner {
-    @apply mx-auto flex h-16 max-w-5xl items-center justify-between px-4 sm:px-6 lg:px-8;
+    /* 3-column grid keeps the tabs centered (col 2) regardless of the brand/controls
+       widths on the sides. */
+    @apply mx-auto grid h-16 max-w-5xl grid-cols-[1fr_auto_1fr] items-center px-4 sm:px-6 lg:px-8;
   }
   .brand {
     @apply flex items-center gap-2 text-lg font-semibold tracking-tight;
@@ -140,22 +142,13 @@
   }
   .input {
     @apply h-10 w-full rounded-lg border border-input bg-background px-3 text-sm
-      placeholder:text-muted-foreground
-      focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
-      focus-visible:ring-offset-2 focus-visible:ring-offset-background;
+      placeholder:text-muted-foreground transition-colors
+      focus-visible:outline-none focus-visible:border-ring focus-visible:ring-1 focus-visible:ring-ring;
   }
   .select {
     @apply h-10 w-full appearance-none rounded-lg border border-input bg-background
-      px-3 pr-8 text-sm
-      focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
-      focus-visible:ring-offset-2 focus-visible:ring-offset-background;
-  }
-
-  /* ---------- dropzone ---------- */
-  .dropzone {
-    @apply flex flex-col items-center justify-center gap-3 rounded-xl border-2
-      border-dashed border-border bg-muted/30 px-6 py-12 text-center
-      transition-colors duration-150 hover:border-primary/50 hover:bg-muted/50;
+      px-3 pr-8 text-sm transition-colors
+      focus-visible:outline-none focus-visible:border-ring focus-visible:ring-1 focus-visible:ring-ring;
   }
 
   /* ---------- tag chip ---------- */
@@ -224,9 +217,9 @@
     @apply border-primary bg-primary/10 text-primary hover:bg-primary/10;
   }
 
-  /* ---------- navbar: tabs divider + compact theme switch ---------- */
-  .nav-divider {
-    @apply mx-1 h-5 w-px bg-border;
+  /* ---------- navbar: active-tab underline + compact theme switch ---------- */
+  .nav-underline {
+    @apply pointer-events-none absolute inset-x-2 bottom-1 h-0.5 rounded-full bg-primary;
   }
   .theme-switch {
     @apply inline-flex items-center gap-0.5 rounded-lg border border-border
@@ -246,20 +239,14 @@
     @apply flex flex-wrap items-center gap-2;
   }
   .chip {
-    @apply inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1
-      text-sm font-medium;
+    @apply inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1.5
+      text-sm font-medium leading-none;
   }
   .chip-primary {
     @apply bg-primary/10 text-primary;
   }
   .chip-remove {
-    @apply text-muted-foreground transition-colors hover:text-foreground;
-  }
-
-  /* ---------- city/proximity rows ---------- */
-  .city-row {
-    @apply flex flex-wrap items-end gap-2 rounded-lg border border-border
-      bg-muted/30 p-3;
+    @apply inline-flex items-center text-muted-foreground transition-colors hover:text-foreground;
   }
 
   /* ---------- error alert ---------- */
@@ -314,5 +301,22 @@
       transparent
     );
     animation: shimmer 1.5s infinite;
+  }
+
+  /* Text shimmer in its own color — a brighter band of the foreground color sweeps
+     across a dimmed version of it (no accent hue). */
+  .text-shimmer {
+    background: linear-gradient(
+      110deg,
+      hsl(var(--foreground) / 0.5) 40%,
+      hsl(var(--foreground)) 50%,
+      hsl(var(--foreground) / 0.5) 60%
+    );
+    background-size: 200% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+    animation: text-shimmer 2.5s linear infinite;
   }
 }

@@ -80,22 +80,30 @@ export default function AnalyzingPage() {
     <div className="page">
       <div className="mx-auto flex min-h-[55vh] max-w-md flex-col items-center justify-center text-center">
         {/* A white resume "sheet" filling in: skeleton lines shimmering in
-            the brand color (see .analyzing-doc / .skeleton-primary). */}
+            the brand color (see .analyzing-doc / .skeleton-primary). Sized tall
+            like a real resume page — a name header + several sections. */}
         <div className="analyzing-doc">
           <div className="skeleton-primary h-5 w-3/5" />
           <div className="skeleton-primary mt-2.5 h-3 w-2/5" />
-          <div className="mt-6 space-y-2.5">
-            {["w-full", "w-11/12", "w-full", "w-4/5"].map((w, i) => (
-              <div key={i} className={`skeleton-primary h-2.5 ${w}`} />
-            ))}
-          </div>
-          <div className="mt-5 space-y-2.5">
-            {["w-full", "w-5/6", "w-full", "w-3/4"].map((w, i) => (
-              <div key={i} className={`skeleton-primary h-2.5 ${w}`} />
-            ))}
-          </div>
+          {[
+            ["w-full", "w-11/12", "w-4/5"],
+            ["w-full", "w-5/6", "w-2/3"],
+            ["w-full", "w-11/12", "w-3/4"],
+            ["w-full", "w-4/5", "w-1/2"],
+          ].map((lines, s) => (
+            <div key={s} className="mt-5">
+              <div className="skeleton-primary h-3 w-1/4" />
+              <div className="mt-2.5 space-y-2.5">
+                {lines.map((w, i) => (
+                  <div key={i} className={`skeleton-primary h-2.5 ${w}`} />
+                ))}
+              </div>
+            </div>
+          ))}
         </div>
-        <h1 className="mt-8 text-xl font-semibold tracking-tight">Analyzing your resume…</h1>
+        <h1 className="text-shimmer mt-8 text-xl font-semibold tracking-tight">
+          Analyzing your resume…
+        </h1>
         <p className="mt-2 text-sm text-muted-foreground">
           Scoring it against your target role and matching live jobs.
         </p>

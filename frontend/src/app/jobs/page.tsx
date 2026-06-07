@@ -6,6 +6,7 @@ import { Icon } from "@/components/ui/icon";
 import { ErrorAlert } from "@/components/ui/alert";
 import { JobCard } from "@/components/JobCard";
 import { JobFilterPanel } from "@/components/JobFilterPanel";
+import { EMPLOYMENT_LABELS } from "@/components/EmploymentTypeSelector";
 import { JobsSkeleton } from "@/components/Skeleton";
 import { getJobsForMe, peekJobs, getProfile, peekProfile, saveProfile, ApiError } from "@/lib/api";
 import { useRequireAuth } from "@/lib/useRequireAuth";
@@ -88,14 +89,41 @@ export default function JobsPage() {
   return (
     <div className="page">
       <div className="mx-auto max-w-3xl">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight">Matched jobs</h1>
-            <p className="mt-1 text-muted-foreground">
-              Live postings matched to your preferences, ranked by your resume.
-            </p>
-          </div>
-          {profile && (
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Matched jobs</h1>
+          <p className="mt-1 text-muted-foreground">
+            Live postings matched to your preferences, ranked by your resume.
+          </p>
+        </div>
+
+        {profile && (
+          <div className="mt-3 flex items-start justify-between gap-3">
+            {/* A read-only summary of the active filters (edit them via Filter). */}
+            <div className="flex flex-wrap gap-2">
+              {profile.targetRoles.map((r) => (
+                <span key={`role-${r}`} className="badge badge-neutral">
+                  {r}
+                </span>
+              ))}
+              {profile.remote ? (
+                <span className="badge badge-neutral">
+                  <Icon name="monitor" className="h-3.5 w-3.5" />
+                  Remote eligible
+                </span>
+              ) : (
+                profile.cities.map((c, i) => (
+                  <span key={`city-${i}`} className="badge badge-neutral">
+                    <Icon name="map-pin" className="h-3.5 w-3.5" />
+                    {c.city}, {c.state}
+                  </span>
+                ))
+              )}
+              {profile.employmentTypes.map((t) => (
+                <span key={`emp-${t}`} className="badge badge-neutral">
+                  {EMPLOYMENT_LABELS[t]}
+                </span>
+              ))}
+            </div>
             <button
               type="button"
               onClick={() => setFilterOpen((open) => !open)}
@@ -109,8 +137,8 @@ export default function JobsPage() {
                 className={cn("h-4 w-4 transition-transform", filterOpen && "rotate-180")}
               />
             </button>
-          )}
-        </div>
+          </div>
+        )}
 
         {profile && filterOpen && (
           <div className="mt-6 motion-safe:animate-[slide-up_0.2s_ease-out]">

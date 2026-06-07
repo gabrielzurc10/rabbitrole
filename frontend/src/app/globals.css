@@ -100,6 +100,14 @@
 @keyframes shimmer {
   100% { transform: translateX(100%); }
 }
+@keyframes nav-underline {
+  from { transform: scaleX(0); opacity: 0; }
+  to { transform: scaleX(1); opacity: 1; }
+}
+@keyframes text-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
 
 @layer base {
   * {

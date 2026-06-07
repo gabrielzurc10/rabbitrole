@@ -2,41 +2,83 @@
 
 import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
-import { Icon } from "@/components/ui/icon";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Card, CardBody, CardTitle, CardSubtitle } from "@/components/ui/card";
 import { ErrorAlert } from "@/components/ui/alert";
 import { ScoreSummary } from "@/components/ScoreSummary";
 import { TagList } from "@/components/TagList";
-import { MatchRing } from "@/components/MatchRing";
-import { ResumeReviewSkeleton } from "@/components/Skeleton";
-import { getAnalysis, ApiError } from "@/lib/api";
+import { ResumeCard } from "@/components/ResumeCard";
+import { ResumeUploader } from "@/components/ResumeUploader";
+import { ResumeReviewSkeleton, ReviewBodySkeleton } from "@/components/Skeleton";
+import { getAnalysis, getProfile, peekProfile, ApiError } from "@/lib/api";
+import { setOnboardingDraft, takeAnalyzeError } from "@/lib/onboardingDraft";
 import { useRequireAuth } from "@/lib/useRequireAuth";
-import type { Analysis } from "@/types";
+import type { Analysis, Profile } from "@/types";
+
+// Flips true after this tab's first mount — see the same pattern in jobs/profile pages.
+let hydrated = false;
 
 function ResumeResult() {
+  const router = useRouter();
   const params = useSearchParams();
   const ready = useRequireAuth();
-  const id = params.get("id");
-  const resumeId = params.get("resumeId") ?? "";
-  const role = params.get("role") ?? "";
 
+  // The review is normally driven by the user's saved profile (this is a nav section),
+  // but explicit query params still override it — that's how /analyzing lands here right
+  // after producing a fresh analysis, and how older links work.
+  const [profile, setProfile] = useState<Profile | null | undefined>(() =>
+    hydrated ? peekProfile() : undefined,
+  );
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // A failed re-analyze (started here, origin "/resume/") sends the user back with a
+  // one-shot message. Read it after mount to keep the static-export hydration clean.
+  const [analyzeError, setAnalyzeError] = useState<string | null>(null);
   useEffect(() => {
-    if (!ready || !id) return; // wait until the auth guard confirms a live session
-    getAnalysis(id)
-      .then(setAnalysis)
-      .catch((e) =>
-        setError(e instanceof ApiError ? e.message : "Could not load analysis."),
-      );
-  }, [ready, id]);
+    const message = takeAnalyzeError();
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- one-shot mount read
+    if (message) setAnalyzeError(message);
+  }, []);
 
-  if (!id || error) {
+  const analysisId = params.get("id") ?? profile?.analysisId;
+  const resumeId = params.get("resumeId") || profile?.resumeId;
+  const role = params.get("role") || profile?.targetRoles[0] || analysis?.role || "";
+
+  // Load the profile (cached after onboarding) so the section works without a query param.
+  useEffect(() => {
+    hydrated = true;
+    if (!ready) return;
+    getProfile()
+      .then((p) => {
+        if (p === null) {
+          router.replace("/onboarding/"); // signed in but not onboarded yet
+          return;
+        }
+        setProfile(p);
+      })
+      .catch((e) => setError(e instanceof ApiError ? e.message : "Could not load your profile."));
+  }, [ready, router]);
+
+  // Load the analysis once we have an id (from the query or the profile).
+  useEffect(() => {
+    if (!ready || !analysisId) return;
+    getAnalysis(analysisId)
+      .then(setAnalysis)
+      .catch((e) => setError(e instanceof ApiError ? e.message : "Could not load analysis."));
+  }, [ready, analysisId]);
+
+  function reAnalyze(file: File) {
+    if (!profile) return;
+    setOnboardingDraft({ profile, file, origin: "/resume/" });
+    router.replace("/analyzing/");
+  }
+
+  if (error) {
     return (
       <div className="page">
         <div className="mx-auto max-w-md">
-          <ErrorAlert message={error ?? "No analysis id provided."} />
+          <ErrorAlert message={error} />
           <Link href="/profile/" className="btn btn-outline mt-4">
             Back to profile
           </Link>
@@ -45,7 +87,10 @@ function ResumeResult() {
     );
   }
 
-  if (!analysis) {
+  // Not loaded yet (undefined) or no profile (null, mid-redirect to onboarding) → full
+  // skeleton. Once the profile is in, the resume + upload cards can render immediately
+  // (they only need the profile); only the analysis-derived body waits.
+  if (!profile) {
     return (
       <div className="page">
         <ResumeReviewSkeleton />
@@ -53,46 +98,45 @@ function ResumeResult() {
     );
   }
 
-  const jobsHref = `/jobs/?role=${encodeURIComponent(role || analysis.role)}${
-    resumeId ? `&resumeId=${resumeId}` : ""
-  }`;
-
   return (
     <div className="page">
-      <div className="mx-auto max-w-3xl">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-4">
-            <MatchRing percent={analysis.score} size={72} />
+      <div className="mx-auto max-w-3xl space-y-6">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Resume review</h1>
+          {role && (
+            <p className="mt-1 text-sm text-muted-foreground">
+              Reviewed for <span className="font-medium text-foreground">{role}</span>
+            </p>
+          )}
+        </div>
+
+        {analyzeError && <ErrorAlert message={analyzeError} />}
+
+        {/* Score ring + filename + View/Download. No analysisId prop → no self-link. */}
+        <ResumeCard resumeId={resumeId} score={analysis?.score ?? profile.score ?? 0} role={role} />
+
+        <Card>
+          <CardBody className="space-y-3">
+            <CardTitle>Update your resume</CardTitle>
+            <CardSubtitle>Upload a new version to re-score it.</CardSubtitle>
+            <ResumeUploader onFile={reAnalyze} />
+          </CardBody>
+        </Card>
+
+        {analysis ? (
+          <>
+            <ScoreSummary counts={analysis.counts} />
             <div>
-              <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
-                <Icon name="file-text" className="text-primary" />
-                Resume review
-              </h1>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Reviewed for{" "}
-                <span className="font-medium text-foreground">{analysis.role}</span>
+              <h2 className="mb-4 text-lg font-semibold tracking-tight">Suggested improvements</h2>
+              <p className="mb-4 text-sm text-muted-foreground">
+                Click any tag to see why it matters and a suggested replacement.
               </p>
+              <TagList tags={analysis.tags} />
             </div>
-          </div>
-          <Link href={jobsHref} className="btn btn-outline btn-sm">
-            <Icon name="briefcase" className="h-4 w-4" />
-            View matched jobs
-          </Link>
-        </div>
-
-        <div className="mt-6">
-          <ScoreSummary counts={analysis.counts} />
-        </div>
-
-        <div className="mt-8">
-          <h2 className="mb-4 text-lg font-semibold tracking-tight">
-            Suggested improvements
-          </h2>
-          <p className="mb-4 text-sm text-muted-foreground">
-            Click any tag to see why it matters and a suggested replacement.
-          </p>
-          <TagList tags={analysis.tags} />
-        </div>
+          </>
+        ) : (
+          <ReviewBodySkeleton />
+        )}
       </div>
     </div>
   );

@@ -2,10 +2,24 @@
 
 import { useState } from "react";
 import { Icon } from "@/components/ui/icon";
+import { cn } from "@/lib/cn";
 
-export function ResumeUploader({ onFile }: { onFile?: (file: File) => void }) {
-  const [fileName, setFileName] = useState<string | null>(null);
-  const [dragging, setDragging] = useState(false);
+/**
+ * A plain upload button with the hint/filename below it. `centered` centers the stack
+ * (used in onboarding); the default left-aligns it. `fileName` seeds the displayed name
+ * so a remount (e.g. stepping back to the upload step in onboarding) still shows the file
+ * the parent already holds.
+ */
+export function ResumeUploader({
+  onFile,
+  centered = false,
+  fileName: initialFileName,
+}: {
+  onFile?: (file: File) => void;
+  centered?: boolean;
+  fileName?: string;
+}) {
+  const [fileName, setFileName] = useState<string | null>(initialFileName ?? null);
 
   function handleFiles(files: FileList | null) {
     const file = files?.[0];
@@ -15,29 +29,16 @@ export function ResumeUploader({ onFile }: { onFile?: (file: File) => void }) {
   }
 
   return (
-    <div>
-      <label className="label">Resume (PDF or Word)</label>
-      <label
-        className="dropzone cursor-pointer"
-        data-dragging={dragging}
-        onDragOver={(e) => {
-          e.preventDefault();
-          setDragging(true);
-        }}
-        onDragLeave={() => setDragging(false)}
-        onDrop={(e) => {
-          e.preventDefault();
-          setDragging(false);
-          handleFiles(e.dataTransfer.files);
-        }}
-      >
-        <Icon name="upload" className="h-8 w-8 text-primary" />
-        <div>
-          <p className="text-sm font-medium">
-            {fileName ?? "Drag & drop or click to upload"}
-          </p>
-          <p className="card-subtitle mt-1">PDF, DOC, or DOCX up to 5MB</p>
-        </div>
+    <div
+      className={cn(
+        "flex flex-col gap-2",
+        centered ? "items-center text-center" : "items-start",
+      )}
+    >
+      {/* The file input is hidden inside the label. */}
+      <label className="btn btn-secondary btn-md cursor-pointer">
+        <Icon name="upload" className="h-4 w-4" />
+        {fileName ? "Choose another file" : "Upload resume"}
         <input
           type="file"
           accept=".pdf,.doc,.docx"
@@ -45,6 +46,9 @@ export function ResumeUploader({ onFile }: { onFile?: (file: File) => void }) {
           onChange={(e) => handleFiles(e.target.files)}
         />
       </label>
+      <span className="text-sm text-muted-foreground">
+        {fileName ?? "PDF, DOC, or DOCX up to 5MB"}
+      </span>
     </div>
   );
 }

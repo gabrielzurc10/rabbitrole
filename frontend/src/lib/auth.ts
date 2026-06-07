@@ -17,6 +17,7 @@ const SCOPES = "openid email profile";
 const CIP_ENDPOINT = `https://cognito-idp.${REGION}.amazonaws.com/`;
 
 const ACCESS_TOKEN_KEY = "rr.accessToken";
+const ID_TOKEN_KEY = "rr.idToken"; // kept only to read the email claim for display
 const EXPIRES_AT_KEY = "rr.expiresAt";
 const VERIFIER_KEY = "rr.pkceVerifier";
 const OTP_SESSION_KEY = "rr.otpSession";
@@ -130,8 +131,13 @@ export async function handleRedirectCallback(): Promise<boolean> {
   });
   if (!res.ok) throw new Error("Sign-in failed. Please try again.");
 
-  const token = (await res.json()) as { access_token: string; expires_in: number };
+  const token = (await res.json()) as {
+    access_token: string;
+    id_token?: string;
+    expires_in: number;
+  };
   localStorage.setItem(ACCESS_TOKEN_KEY, token.access_token);
+  if (token.id_token) localStorage.setItem(ID_TOKEN_KEY, token.id_token);
   localStorage.setItem(EXPIRES_AT_KEY, String(Date.now() + token.expires_in * 1000));
 
   // Drop the ?code= from the URL so a refresh doesn't re-exchange it.
@@ -205,12 +211,13 @@ export async function verifyEmailCode(email: string, code: string): Promise<void
   }
 
   const result = data.AuthenticationResult as
-    | { AccessToken?: string; ExpiresIn?: number }
+    | { AccessToken?: string; IdToken?: string; ExpiresIn?: number }
     | undefined;
   if (!result?.AccessToken) throw new Error("Sign-in failed. Please try again.");
 
   sessionStorage.removeItem(OTP_SESSION_KEY);
   localStorage.setItem(ACCESS_TOKEN_KEY, result.AccessToken);
+  if (result.IdToken) localStorage.setItem(ID_TOKEN_KEY, result.IdToken);
   localStorage.setItem(EXPIRES_AT_KEY, String(Date.now() + (result.ExpiresIn ?? 3600) * 1000));
 }
 
@@ -221,6 +228,24 @@ export function getAccessToken(): string | null {
   const expiresAt = Number(localStorage.getItem(EXPIRES_AT_KEY) ?? 0);
   if (!token || Date.now() >= expiresAt) return null;
   return token;
+}
+
+/**
+ * The signed-in user's email, decoded from the stored ID token's `email` claim, or
+ * null (demo mode / no token / unparseable). Display-only — we don't verify the token.
+ */
+export function getEmail(): string | null {
+  if (typeof window === "undefined") return null;
+  const idToken = localStorage.getItem(ID_TOKEN_KEY);
+  if (!idToken) return null;
+  try {
+    const payload = idToken.split(".")[1];
+    const json = atob(payload.replace(/-/g, "+").replace(/_/g, "/"));
+    const claims = JSON.parse(json) as { email?: string };
+    return claims.email ?? null;
+  } catch {
+    return null;
+  }
 }
 
 /** Demo mode is "signed in" unless explicitly signed out; otherwise gate on a live token. */
@@ -239,6 +264,7 @@ export function clearDemoSession(): void {
 /** Sign out: clear tokens and (when configured) end the Hosted UI session. */
 export function logout(): void {
   localStorage.removeItem(ACCESS_TOKEN_KEY);
+  localStorage.removeItem(ID_TOKEN_KEY);
   localStorage.removeItem(EXPIRES_AT_KEY);
   setOnboarded(false); // hide the Jobs/Profile tabs
   if (!isConfigured) {

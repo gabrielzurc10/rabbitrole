@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { cn } from "@/lib/cn";
+import { titleCase } from "@/lib/text";
 
 /**
  * Type a role + "Add" (or Enter) to append it as a removable chip. The first
@@ -19,7 +20,7 @@ export function RoleChipInput({
   const [text, setText] = useState("");
 
   function add() {
-    const role = text.trim();
+    const role = titleCase(text.trim());
     if (!role || value.includes(role)) {
       setText("");
       return;
