@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Card, CardBody, CardTitle, CardSubtitle } from "@/components/ui/card";
+import { Icon } from "@/components/ui/icon";
 import { ErrorAlert } from "@/components/ui/alert";
 import { ScoreSummary } from "@/components/ScoreSummary";
 import { TagList } from "@/components/TagList";
@@ -31,6 +32,9 @@ function ResumeResult() {
   );
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // The profile can point at an analysis the backend no longer has (404). That's not a
+  // hard error — fall back to the "no analysis yet" state so the user can re-upload.
+  const [analysisUnavailable, setAnalysisUnavailable] = useState(false);
 
   // A failed re-analyze (started here, origin "/resume/") sends the user back with a
   // one-shot message. Read it after mount to keep the static-export hydration clean.
@@ -44,6 +48,7 @@ function ResumeResult() {
   const analysisId = params.get("id") ?? profile?.analysisId;
   const resumeId = params.get("resumeId") || profile?.resumeId;
   const role = params.get("role") || profile?.targetRoles[0] || analysis?.role || "";
+  const hasAnalysis = Boolean(analysisId) && !analysisUnavailable;
 
   // Load the profile (cached after onboarding) so the section works without a query param.
   useEffect(() => {
@@ -60,12 +65,13 @@ function ResumeResult() {
       .catch((e) => setError(e instanceof ApiError ? e.message : "Could not load your profile."));
   }, [ready, router]);
 
-  // Load the analysis once we have an id (from the query or the profile).
+  // Load the analysis once we have an id (from the query or the profile). A missing/failed
+  // analysis isn't fatal — flag it so the page shows the "no analysis yet" upload prompt.
   useEffect(() => {
     if (!ready || !analysisId) return;
     getAnalysis(analysisId)
       .then(setAnalysis)
-      .catch((e) => setError(e instanceof ApiError ? e.message : "Could not load analysis."));
+      .catch(() => setAnalysisUnavailable(true));
   }, [ready, analysisId]);
 
   function reAnalyze(file: File) {
@@ -103,7 +109,7 @@ function ResumeResult() {
       <div className="mx-auto max-w-3xl space-y-6">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Resume review</h1>
-          {role && (
+          {hasAnalysis && role && (
             <p className="mt-1 text-sm text-muted-foreground">
               Reviewed for <span className="font-medium text-foreground">{role}</span>
             </p>
@@ -112,31 +118,46 @@ function ResumeResult() {
 
         {analyzeError && <ErrorAlert message={analyzeError} />}
 
-        {/* Score ring + filename + View/Download. No analysisId prop → no self-link. */}
-        <ResumeCard resumeId={resumeId} score={analysis?.score ?? profile.score ?? 0} role={role} />
+        {hasAnalysis ? (
+          /* Score ring + filename + View/Download. No analysisId prop → no self-link. */
+          <ResumeCard resumeId={resumeId} score={analysis?.score ?? profile.score ?? 0} role={role} />
+        ) : (
+          <Card>
+            <CardBody className="flex flex-col items-center gap-2 py-10 text-center">
+              <Icon name="file-text" className="h-10 w-10 text-muted-foreground" />
+              <CardTitle>No analysis found</CardTitle>
+              <CardSubtitle>Upload a resume below to start analyzing.</CardSubtitle>
+            </CardBody>
+          </Card>
+        )}
 
         <Card>
           <CardBody className="space-y-3">
-            <CardTitle>Update your resume</CardTitle>
-            <CardSubtitle>Upload a new version to re-score it.</CardSubtitle>
+            <CardTitle>{hasAnalysis ? "Update your resume" : "Upload your resume"}</CardTitle>
+            <CardSubtitle>
+              {hasAnalysis
+                ? "Upload a new version to re-score it."
+                : "Upload a resume to start analyzing."}
+            </CardSubtitle>
             <ResumeUploader onFile={reAnalyze} />
           </CardBody>
         </Card>
 
-        {analysis ? (
-          <>
-            <ScoreSummary counts={analysis.counts} />
-            <div>
-              <h2 className="mb-4 text-lg font-semibold tracking-tight">Suggested improvements</h2>
-              <p className="mb-4 text-sm text-muted-foreground">
-                Click any tag to see why it matters and a suggested replacement.
-              </p>
-              <TagList tags={analysis.tags} />
-            </div>
-          </>
-        ) : (
-          <ReviewBodySkeleton />
-        )}
+        {hasAnalysis &&
+          (analysis ? (
+            <>
+              <ScoreSummary counts={analysis.counts} />
+              <div>
+                <h2 className="mb-4 text-lg font-semibold tracking-tight">Suggested improvements</h2>
+                <p className="mb-4 text-sm text-muted-foreground">
+                  Click any tag to see why it matters and a suggested replacement.
+                </p>
+                <TagList tags={analysis.tags} />
+              </div>
+            </>
+          ) : (
+            <ReviewBodySkeleton />
+          ))}
       </div>
     </div>
   );

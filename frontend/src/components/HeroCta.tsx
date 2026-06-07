@@ -11,9 +11,9 @@ import { warmUp } from "@/lib/api";
 const noopSubscribe = () => () => {};
 
 /**
- * Homepage primary CTA. Signed-in users go to their profile; everyone else is
- * sent to sign in first. (The profile page itself routes brand-new users into
- * onboarding.)
+ * Homepage primary CTA. Signed-in users go to their resume review; everyone else is
+ * sent to sign in first. (The resume page itself routes brand-new users into
+ * onboarding when they have no profile yet.)
  */
 export function HeroCta() {
   usePathname();
@@ -25,7 +25,7 @@ export function HeroCta() {
     warmUp();
   }, []);
   return (
-    <Link href={authed ? "/profile/" : "/login/"} className="btn btn-primary btn-lg">
+    <Link href={authed ? "/resume/" : "/login/"} className="btn btn-primary btn-lg">
       Analyze my resume
       <Icon name="arrow-right" className="h-4 w-4" />
     </Link>
