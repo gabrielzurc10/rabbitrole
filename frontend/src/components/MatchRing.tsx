@@ -6,7 +6,7 @@ export function MatchRing({
   percent: number;
   size?: number;
 }) {
-  const stroke = 5;
+  const stroke = 8;
   const radius = (size - stroke) / 2;
   const circumference = 2 * Math.PI * radius;
   const offset = circumference - (percent / 100) * circumference;

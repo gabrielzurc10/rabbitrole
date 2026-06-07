@@ -35,42 +35,48 @@ export function NavTabs() {
         aria-current={onJobs ? "page" : undefined}
         className={cn(
           "btn btn-sm relative",
-          onJobs ? "text-primary font-medium" : "text-muted-foreground hover:text-foreground",
+          onJobs ? "text-primary font-medium" : "text-foreground hover:bg-muted",
         )}
       >
         <Icon name="briefcase" className="h-4 w-4" />
-        Jobs
-        {onJobs && (
-          <span className="nav-underline motion-safe:animate-[nav-underline_0.22s_ease-out]" aria-hidden="true" />
-        )}
+        <span className="relative">
+          Jobs
+          {onJobs && (
+            <span className="nav-underline motion-safe:animate-[nav-underline_0.22s_ease-out]" aria-hidden="true" />
+          )}
+        </span>
       </Link>
       <Link
         href="/resume/"
         aria-current={onResume ? "page" : undefined}
         className={cn(
           "btn btn-sm relative",
-          onResume ? "text-primary font-medium" : "text-muted-foreground hover:text-foreground",
+          onResume ? "text-primary font-medium" : "text-foreground hover:bg-muted",
         )}
       >
         <Icon name="file-text" className="h-4 w-4" />
-        Resume
-        {onResume && (
-          <span className="nav-underline motion-safe:animate-[nav-underline_0.22s_ease-out]" aria-hidden="true" />
-        )}
+        <span className="relative">
+          Resume
+          {onResume && (
+            <span className="nav-underline motion-safe:animate-[nav-underline_0.22s_ease-out]" aria-hidden="true" />
+          )}
+        </span>
       </Link>
       <Link
         href="/profile/"
         aria-current={onProfile ? "page" : undefined}
         className={cn(
           "btn btn-sm relative",
-          onProfile ? "text-primary font-medium" : "text-muted-foreground hover:text-foreground",
+          onProfile ? "text-primary font-medium" : "text-foreground hover:bg-muted",
         )}
       >
         <Icon name="user" className="h-4 w-4" />
-        Profile
-        {onProfile && (
-          <span className="nav-underline motion-safe:animate-[nav-underline_0.22s_ease-out]" aria-hidden="true" />
-        )}
+        <span className="relative">
+          Profile
+          {onProfile && (
+            <span className="nav-underline motion-safe:animate-[nav-underline_0.22s_ease-out]" aria-hidden="true" />
+          )}
+        </span>
       </Link>
     </>
   );

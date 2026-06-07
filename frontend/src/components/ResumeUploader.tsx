@@ -36,7 +36,7 @@ export function ResumeUploader({
       )}
     >
       {/* The file input is hidden inside the label. */}
-      <label className="btn btn-secondary btn-md cursor-pointer">
+      <label className="btn btn-secondary btn-md cursor-pointer dark:bg-white/10 dark:hover:bg-white/20">
         <Icon name="upload" className="h-4 w-4" />
         {fileName ? "Choose another file" : "Upload resume"}
         <input

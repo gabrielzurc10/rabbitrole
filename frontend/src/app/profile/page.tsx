@@ -121,7 +121,11 @@ export default function ProfilePage() {
             <h1 className="text-2xl font-bold uppercase tracking-tight">{profile.fullName}</h1>
             <p className="mt-1 text-muted-foreground">Your account settings.</p>
           </div>
-          <Button variant="outline" onClick={() => setSignOutOpen(true)}>
+          <Button
+            variant="outline"
+            className="dark:bg-muted dark:hover:bg-border"
+            onClick={() => setSignOutOpen(true)}
+          >
             <Icon name="log-out" className="h-4 w-4" />
             Sign out
           </Button>
@@ -147,7 +151,7 @@ export default function ProfilePage() {
             <div>
               <label className="label">Email</label>
               <p className="flex h-10 items-center gap-2 text-sm text-muted-foreground">
-                <Icon name="mail" className="h-4 w-4 shrink-0 text-primary" />
+                <Icon name="mail" className="h-4 w-4 shrink-0 text-foreground" />
                 {email ?? "—"}
               </p>
             </div>

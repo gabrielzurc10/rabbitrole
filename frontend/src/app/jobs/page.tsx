@@ -90,7 +90,7 @@ export default function JobsPage() {
     <div className="page">
       <div className="mx-auto max-w-3xl">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Matched jobs</h1>
+          <h1 className="text-2xl font-bold uppercase tracking-tight">Matched jobs</h1>
           <p className="mt-1 text-muted-foreground">
             Live postings matched to your preferences, ranked by your resume.
           </p>
@@ -128,7 +128,7 @@ export default function JobsPage() {
               type="button"
               onClick={() => setFilterOpen((open) => !open)}
               aria-expanded={filterOpen}
-              className="job-reason-toggle shrink-0"
+              className="btn btn-outline btn-md shrink-0 dark:bg-muted dark:hover:bg-border"
             >
               <Icon name="sliders" className="h-4 w-4" />
               Filter

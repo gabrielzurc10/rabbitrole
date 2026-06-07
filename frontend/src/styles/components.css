@@ -59,7 +59,8 @@
 
   /* ---------- card ---------- */
   .card {
-    @apply rounded-xl border border-border bg-card text-card-foreground shadow-sm;
+    /* Centered (0-offset) shadow so the glow is even on all four edges. */
+    @apply rounded-xl bg-card text-card-foreground shadow-[0_0_15px_rgba(0,0,0,0.1)];
   }
   .card-pad {
     @apply p-6;
@@ -91,8 +92,9 @@
 
   /* ---------- job card ---------- */
   .job-card {
-    @apply flex flex-col overflow-hidden rounded-xl border border-border bg-card
-      text-card-foreground shadow-sm transition-shadow hover:shadow-md sm:flex-row;
+    @apply flex flex-col overflow-hidden rounded-xl bg-card text-card-foreground
+      shadow-[0_0_15px_rgba(0,0,0,0.1)] transition-shadow
+      hover:shadow-[0_0_22px_rgba(0,0,0,0.14)] sm:flex-row;
   }
   .job-card-main {
     @apply min-w-0 flex-1 space-y-4 p-5;
@@ -219,7 +221,8 @@
 
   /* ---------- navbar: active-tab underline + compact theme switch ---------- */
   .nav-underline {
-    @apply pointer-events-none absolute inset-x-2 bottom-1 h-0.5 rounded-full bg-primary;
+    /* inset-x-0 of its wrapper (the label span) so it underlines only the word. */
+    @apply pointer-events-none absolute inset-x-0 -bottom-1 h-0.5 rounded-full bg-primary;
   }
   .theme-switch {
     @apply inline-flex items-center gap-0.5 rounded-lg border border-border
@@ -231,7 +234,7 @@
       focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring;
   }
   .theme-switch-btn-active {
-    @apply bg-background text-primary shadow-sm hover:text-primary;
+    @apply bg-background text-foreground shadow-sm hover:text-foreground;
   }
 
   /* ---------- chip input (roles) ---------- */

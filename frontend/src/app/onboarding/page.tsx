@@ -90,7 +90,7 @@ export default function OnboardingPage() {
   return (
     <div className="page">
       <div className="mx-auto max-w-2xl">
-        <h1 className="text-2xl font-semibold tracking-tight">Set up your profile</h1>
+        <h1 className="text-2xl font-bold uppercase tracking-tight">Set up your profile</h1>
         <p className="mt-1 text-muted-foreground">
           A few quick steps so we can tailor your review and job matches.
         </p>

@@ -266,6 +266,10 @@ export function logout(): void {
   localStorage.removeItem(ACCESS_TOKEN_KEY);
   localStorage.removeItem(ID_TOKEN_KEY);
   localStorage.removeItem(EXPIRES_AT_KEY);
+  // The theme is a per-signed-in-user preference: reset to system on sign out so the
+  // signed-out app (landing/login) always uses the system theme. ("theme" is
+  // next-themes' default storage key; clearing it falls back to defaultTheme="system".)
+  localStorage.removeItem("theme");
   setOnboarded(false); // hide the Jobs/Profile tabs
   if (!isConfigured) {
     sessionStorage.setItem(DEMO_LOGOUT_KEY, "1"); // demo: remember we signed out
