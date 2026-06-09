@@ -5,8 +5,8 @@ Three stacks:
 | Stack | State | Purpose |
 |-------|-------|---------|
 | `bootstrap/` | **local** | One-time: state bucket, lock table, CI IAM user. Persistent. |
-| `modules/rabbitrole/` | — | All app resources, parameterized by env. |
-| `environments/{dev,prod}/` | **remote (S3)** | Compose the module per env. |
+| `modules/rabbitrole/` | — | All app resources. |
+| `environments/dev/` | **remote (S3)** | Composes the module — the single environment. |
 
 ## First-time setup
 
@@ -20,8 +20,7 @@ terraform output -raw ci_secret_access_key # -> GitHub Secret AWS_SECRET_ACCESS_
 # 2. Dev environment. Secrets via env vars (never committed):
 cd ../environments/dev
 export TF_VAR_openai_api_key=sk-...
-export TF_VAR_adzuna_app_id=...
-export TF_VAR_adzuna_app_key=...
+export TF_VAR_jsearch_api_key=...
 terraform init
 terraform validate
 terraform plan        # review; apply only when ready
@@ -39,9 +38,10 @@ App buckets use `force_destroy` and ECR uses `force_delete`, so destroy is clean
 
 ## Notes
 
-- **Lambda stays out of the VPC** and reaches Aurora via the **RDS Data API**, so
-  there's no NAT Gateway (~$32/mo saved). The VPC exists only to host the cluster.
-- Aurora Serverless v2 with `min_capacity = 0` **auto-pauses to $0** when idle.
+- **Lambda needs no VPC** — it reaches **DynamoDB**, S3, and SSM over AWS's public
+  APIs, so there's no NAT Gateway and no VPC at all.
+- **DynamoDB** tables (`profiles`, `resumes`, `analyses`) use **on-demand** billing —
+  ~$0 idle, always warm (no auto-pause resume penalty).
 - Secrets live in **SSM Parameter Store**, passed in via `TF_VAR_*`.
 - `lambda_function.image_uri` is `ignore_changes`d — CI updates the image
   out-of-band (Phase 6), so Terraform won't fight the deploy.

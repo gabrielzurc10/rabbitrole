@@ -379,14 +379,17 @@ export function logout(): void {
   // next-themes' default storage key; clearing it falls back to defaultTheme="system".)
   localStorage.removeItem("theme");
   setOnboarded(false); // hide the Jobs/Profile tabs
+  // location.replace (not assign): swap the page we signed out from OUT of history so
+  // pressing Back can't return to it. Deeper protected entries are still caught by
+  // useRequireAuth's bfcache re-check, which also replaces them with /login.
   if (!isConfigured) {
     sessionStorage.setItem(DEMO_LOGOUT_KEY, "1"); // demo: remember we signed out
-    window.location.assign("/login/");
+    window.location.replace("/login/");
     return;
   }
   const params = new URLSearchParams({
     client_id: CLIENT_ID,
     logout_uri: `${window.location.origin}/login`,
   });
-  window.location.assign(`https://${DOMAIN}/logout?${params.toString()}`);
+  window.location.replace(`https://${DOMAIN}/logout?${params.toString()}`);
 }

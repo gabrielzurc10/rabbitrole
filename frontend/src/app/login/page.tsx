@@ -17,6 +17,7 @@ import {
   isConfigured,
 } from "@/lib/auth";
 import { getProfile, warmUp } from "@/lib/api";
+import { setSigningIn } from "@/lib/signingStatus";
 
 function LoginCard() {
   const router = useRouter();
@@ -49,6 +50,13 @@ function LoginCard() {
   // While exchanging the Google Hosted-UI ?code= (or resolving where to go next),
   // show a spinner instead of the form so the sign-in card doesn't flash.
   const exchanging = (params.has("code") || routing) && !error;
+
+  // Tell the navbar when the "Signing you in…" animation is up, so it locks the brand
+  // only then (not on the plain form). Clear it when leaving the page.
+  useEffect(() => {
+    setSigningIn(exchanging);
+  }, [exchanging]);
+  useEffect(() => () => setSigningIn(false), []);
 
   // After sign-in, send brand-new accounts straight to onboarding and returning
   // users to the Jobs tab. We check the profile here; a new account gets a 204
