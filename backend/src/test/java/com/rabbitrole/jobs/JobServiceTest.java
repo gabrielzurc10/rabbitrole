@@ -96,6 +96,24 @@ class JobServiceTest {
     }
 
     @Test
+    void interleavesRolesRoundRobinSoEachPageBlendsThem() {
+        // Two roles, remote (one query each). The merged order should alternate the roles
+        // — r1[0], r2[0], r1[1], r2[1], … — not list all of the first role then the second,
+        // so the frontend's first ten is a blend.
+        Profile p = new Profile("user-1", "Ada", List.of("Software Engineer", "Backend Engineer"),
+                true, List.of(), List.of(), "resume-1", "analysis-1", 80, Instant.now());
+        when(client.search(eq("Software Engineer"), isNull(), eq(true), anyList(), anyInt()))
+                .thenReturn(List.of(job("se-1"), job("se-2"), job("se-3")));
+        when(client.search(eq("Backend Engineer"), isNull(), eq(true), anyList(), anyInt()))
+                .thenReturn(List.of(job("be-1"), job("be-2")));
+
+        List<Job> result = service.forProfile(p, "resume text", 0);
+
+        assertThat(result).extracting(Job::id)
+                .containsExactly("se-1", "be-1", "se-2", "be-2", "se-3"); // round-robin, longer role trails
+    }
+
+    @Test
     void remoteProfileIssuesRemoteSearch() {
         Profile p = profile(true, List.of(), List.of());
         when(client.search(eq("Backend Engineer"), isNull(), eq(true), anyList(), anyInt()))

@@ -9,28 +9,49 @@
     @apply mx-auto w-full max-w-5xl px-4 py-10 sm:px-6 lg:px-8;
   }
   .navbar {
-    @apply sticky top-0 z-40 w-full bg-background;
+    /* Transparent sticky wrapper: holds the pill a little below the top and inside
+       the side gutters. The pill itself (.navbar-inner) carries the visuals. */
+    @apply sticky top-0 z-40 w-full px-4 pt-3 sm:px-6 lg:px-8;
   }
   .navbar-inner {
-    /* 3-column grid keeps the tabs centered (col 2) regardless of the brand/controls
-       widths on the sides. */
-    @apply mx-auto grid h-16 max-w-5xl grid-cols-[1fr_auto_1fr] items-center px-4 sm:px-6 lg:px-8;
+    /* Floating solid pill (borderless). Dark mode uses a lighter shade of the
+       theme's dark-blue (hue ~222, well above the page's 5% lightness) so it
+       stays on-palette. 3-column grid keeps the tabs centered (col 2)
+       regardless of the brand/controls widths on the sides. */
+    @apply mx-auto grid h-14 max-w-4xl grid-cols-[1fr_auto_1fr] items-center
+      rounded-full bg-background px-4 dark:bg-[hsl(222_40%_18%)]
+      shadow-[0_8px_30px_rgba(0,0,0,0.08)];
   }
   .brand {
     @apply flex items-center gap-2 text-lg font-semibold tracking-tight;
   }
   .site-footer {
-    @apply mt-16 border-t border-border;
+    @apply mt-24 border-t border-border;
   }
   .site-footer-inner {
-    @apply mx-auto flex max-w-5xl flex-col items-center justify-between gap-3 px-4
-      py-6 text-sm text-muted-foreground sm:flex-row sm:px-6 lg:px-8;
+    @apply mx-auto max-w-5xl px-4 py-12 sm:px-6 lg:px-8;
+  }
+  .footer-top {
+    @apply flex flex-col gap-10 sm:flex-row sm:items-start sm:justify-between sm:gap-12;
+  }
+  .footer-tagline {
+    @apply mt-3 max-w-xs text-sm leading-relaxed text-muted-foreground;
+  }
+  .footer-cols {
+    @apply grid grid-cols-2 gap-8 sm:grid-cols-3 sm:gap-14;
+  }
+  .footer-col-title {
+    @apply mb-3 text-xs font-semibold uppercase tracking-wider text-foreground;
+  }
+  .footer-col {
+    @apply flex flex-col items-start gap-2.5 text-sm;
+  }
+  .footer-bottom {
+    @apply mt-12 flex flex-col items-center justify-between gap-2 border-t border-border/60
+      pt-6 text-xs text-muted-foreground sm:flex-row;
   }
   .site-footer-copy {
     @apply text-xs;
-  }
-  .site-footer-links {
-    @apply flex items-center gap-5;
   }
   .site-footer-link {
     /* Same grow-in underline as the legal links, plus the colour shift on hover. */
@@ -46,6 +67,37 @@
   }
   .gradient-text {
     @apply bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent;
+  }
+
+  /* ---------- decorative wave background (landing, PSP XMB-style) ---------- */
+  .wave-bg {
+    /* Fixed, behind everything, never interactive — purely ambient. */
+    @apply pointer-events-none fixed inset-0 -z-10 overflow-hidden;
+  }
+  .wave {
+    /* Each layer is one luminous ribbon (baked green crest gradient in the SVG),
+       overscanned past every edge so the gentle morph never exposes a seam. The
+       blur turns the crest line into a soft glow. Each animation loops back to its
+       exact start (0% == 100%), so the motion is perfectly continuous — no cutout. */
+    @apply absolute;
+    inset: -25%;
+    width: 150%;
+    height: 150%;
+    background-repeat: no-repeat;
+    background-size: 100% 100%;
+    filter: blur(8px);
+    will-change: transform;
+    transform-origin: center;
+  }
+  .wave-1 {
+    background-image: url(/waves/ribbon-1.svg);
+    opacity: 0.6;
+    animation: wave-a 20s ease-in-out infinite;
+  }
+  .wave-2 {
+    background-image: url(/waves/ribbon-2.svg);
+    opacity: 0.5;
+    animation: wave-b 26s ease-in-out infinite;
   }
 
   /* ---------- button ---------- */
@@ -76,7 +128,8 @@
     @apply bg-muted text-foreground hover:bg-muted/70;
   }
   .btn-outline {
-    @apply border border-border bg-transparent hover:bg-muted;
+    /* Borderless, soft-gray pill (the border color became the fill); darkens on hover. */
+    @apply bg-muted hover:bg-border;
   }
   .btn-ghost {
     @apply bg-transparent hover:bg-muted;
@@ -110,6 +163,12 @@
   }
   .badge-primary {
     @apply bg-primary/10 text-primary;
+  }
+  .badge-glass {
+    /* Transparent glass pill — lets the background (the wave) show through, with a
+       faint border + blur for shape. Adapts to light/dark. */
+    @apply border border-foreground/15 bg-foreground/[0.04] text-foreground backdrop-blur-sm
+      dark:border-white/15 dark:bg-white/[0.06];
   }
   .badge-critical {
     @apply bg-critical/10 text-critical;
@@ -256,6 +315,51 @@
       focus:outline-none;
   }
 
+  /* ---------- landing showcase demos ---------- */
+  .showcase-frame {
+    /* Faux app window: soft floating panel that frames each animated demo. */
+    @apply overflow-hidden rounded-2xl bg-card shadow-[0_18px_50px_-12px_rgba(0,0,0,0.25)];
+  }
+  .showcase-frame-bar {
+    @apply flex items-center gap-2 bg-muted/40 px-4 py-3 dark:bg-white/[0.03];
+  }
+  .showcase-frame-bar span {
+    @apply h-3 w-3 rounded-full;
+  }
+  .showcase-frame-body {
+    @apply p-5 sm:p-6;
+  }
+  .demo-ring-fill {
+    /* Overrides the base ring's hover transition with a looping fill. */
+    animation: ring-fill 5s ease-in-out infinite;
+  }
+  .demo-score {
+    /* Counts up to the target then back down, exactly tracking the ring (same 5s loop +
+       easing). --num is driven by the score-count keyframes (see globals.css). */
+    --target: 85;
+    --num: var(--target);
+    animation: score-count 5s ease-in-out infinite;
+  }
+  .demo-score::after {
+    counter-reset: num var(--num);
+    content: counter(num) "%";
+  }
+  .demo-tag {
+    /* A highlight pulse that travels down the list (staggered delay per chip). */
+    animation: tag-pulse 6s ease-in-out infinite;
+  }
+  .demo-scroll-window {
+    /* Fixed viewport over a taller feed; the top/bottom fade hides the loop seam. */
+    @apply relative overflow-hidden;
+    height: 26rem;
+    -webkit-mask: linear-gradient(180deg, transparent, #000 9%, #000 88%, transparent);
+    mask: linear-gradient(180deg, transparent, #000 9%, #000 88%, transparent);
+  }
+  .demo-scroll-track {
+    @apply flex flex-col gap-3 p-4;
+    animation: vscroll 26s linear infinite;
+  }
+
   /* ---------- match ring ---------- */
   .match-ring-track {
     @apply text-muted;
@@ -298,13 +402,15 @@
     @apply grid grid-cols-3 gap-2;
   }
   .segment {
-    @apply flex flex-col items-center justify-center gap-1.5 rounded-full border
-      border-border bg-background px-3 py-4 text-sm font-medium
-      transition-colors hover:bg-muted
+    /* Borderless soft-gray pill, matching .btn-outline; darkens on hover. */
+    @apply flex flex-col items-center justify-center gap-1.5 rounded-full
+      bg-muted px-3 py-4 text-sm font-medium
+      transition-colors hover:bg-border
       focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring;
   }
   .segment-active {
-    @apply border-primary bg-primary/10 text-primary hover:bg-primary/10;
+    /* Selected: green fill + text, no border. */
+    @apply bg-primary/10 text-primary hover:bg-primary/10;
   }
 
   /* ---------- navbar: active-tab underline + compact theme switch ---------- */
@@ -363,6 +469,22 @@
   .error-alert {
     @apply flex items-start gap-2 rounded-lg border border-critical/30
       bg-critical/10 px-3 py-2 text-left text-sm text-critical;
+  }
+
+  /* ---------- back-to-top (floating) ---------- */
+  .scroll-top {
+    @apply fixed bottom-6 right-6 z-40 inline-flex h-11 w-11 items-center justify-center
+      rounded-full border border-border bg-card text-foreground shadow-[0_0_15px_rgba(0,0,0,0.15)]
+      transition-all duration-200 hover:bg-muted
+      focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
+      focus-visible:ring-offset-2 focus-visible:ring-offset-background
+      motion-reduce:transition-none;
+  }
+  .scroll-top-hidden {
+    @apply pointer-events-none translate-y-2 opacity-0 motion-reduce:transform-none;
+  }
+  .scroll-top-visible {
+    @apply translate-y-0 opacity-100;
   }
 
   /* ---------- toast (success) ---------- */

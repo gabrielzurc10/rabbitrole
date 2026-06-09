@@ -126,7 +126,10 @@ export function RoleChipInput({
                   else chipRefs.current.delete(role);
                 }}
                 className={cn(
-                  "chip relative transition-transform duration-150 hover:z-10 hover:scale-110 motion-reduce:transform-none",
+                  "chip relative",
+                  // Hover-grow only on the gray (non-primary) role chips; the primary stays put.
+                  i !== 0 &&
+                    "transition-transform duration-150 hover:z-10 hover:scale-110 motion-reduce:transform-none",
                   !initialRoles.has(role) && "chip-enter", // only newly-added roles pop in
                   i === 0 && "chip-primary",
                   isLeaving && "chip-leave",
@@ -141,7 +144,9 @@ export function RoleChipInput({
                 {/* Click the chip body to promote it to primary. */}
                 <button
                   type="button"
-                  className="inline-flex items-center gap-1.5"
+                  // The primary chip isn't clickable (already primary) — show the text
+                  // caret like the location chips, not the hand pointer.
+                  className={cn("inline-flex items-center gap-1.5", i === 0 && "cursor-text")}
                   onClick={() => makePrimary(role)}
                   aria-label={i === 0 ? `${role} — primary role` : `Make ${role} the primary role`}
                 >

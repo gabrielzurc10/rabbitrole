@@ -112,12 +112,55 @@
   from { opacity: 1; transform: scale(1); }
   to { opacity: 0; transform: scale(0.85); }
 }
-@keyframes hop {
-  0%, 100% { transform: translateY(0); }
-  25% { transform: translateY(-35%); }
-  45% { transform: translateY(0); }
-  65% { transform: translateY(-15%); }
-  85% { transform: translateY(0); }
+/* Landing wave ribbons (PSP XMB-style): each sways, bobs and breathes, returning to
+   its exact starting transform (0% == 100%) so the loop is perfectly seamless — no
+   visible cutout. Three different paths/durations keep the combined motion organic.
+   Amplitudes stay inside the layer's overscan so no edge is ever exposed. */
+@keyframes wave-a {
+  0%, 100% { transform: translate(0, 0) scaleY(1); }
+  25% { transform: translate(-6%, 3%) scaleY(1.1); }
+  50% { transform: translate(-9%, -2%) scaleY(1); }
+  75% { transform: translate(-4%, 3.5%) scaleY(0.92); }
+}
+@keyframes wave-b {
+  0%, 100% { transform: translate(0, 0) scaleY(1); }
+  25% { transform: translate(7%, -2.5%) scaleY(0.93); }
+  50% { transform: translate(10%, 2.5%) scaleY(1.04); }
+  75% { transform: translate(5%, -3%) scaleY(1.1); }
+}
+
+/* Landing showcase demos (look like little looping demo clips). */
+@keyframes ring-fill {
+  0% { stroke-dashoffset: var(--circ); }
+  35% { stroke-dashoffset: var(--off); }
+  85% { stroke-dashoffset: var(--off); }
+  100% { stroke-dashoffset: var(--circ); }
+}
+/* Animatable integer backing the score counter — needs @property so it interpolates
+   (a plain custom property would jump rather than count). */
+@property --num {
+  syntax: "<integer>";
+  inherits: true;
+  initial-value: 0;
+}
+/* Counts 0 → target as the ring fills, holds, then back down to 0 as it empties.
+   Mirrors ring-fill's keyframe times exactly so the number tracks the arc. */
+@keyframes score-count {
+  0% { --num: 0; }
+  35% { --num: var(--target); }
+  85% { --num: var(--target); }
+  100% { --num: 0; }
+}
+@keyframes tag-pulse {
+  0%, 20%, 100% { box-shadow: 0 0 15px rgba(0, 0, 0, 0.1); transform: scale(1); }
+  10% {
+    box-shadow: 0 0 0 2px hsl(var(--primary) / 0.45), 0 0 22px rgba(0, 0, 0, 0.14);
+    transform: scale(1.015);
+  }
+}
+@keyframes vscroll {
+  from { transform: translateY(0); }
+  to { transform: translateY(-50%); }
 }
 /* The selection circle sliding from its old segment (--from) to the new one (--to),
    with a horizontal stretch mid-travel so it reads as a swipe. */
@@ -149,9 +192,10 @@
   input[type="file"]:not(:disabled) {
     cursor: pointer;
   }
-  /* Respect reduced-motion globally. */
+  /* Respect reduced-motion globally — except the purely decorative landing wave
+     (.wave), which is intentionally kept animating regardless of the setting. */
   @media (prefers-reduced-motion: reduce) {
-    *,
+    *:not(.wave),
     *::before,
     *::after {
       animation-duration: 0.01ms !important;

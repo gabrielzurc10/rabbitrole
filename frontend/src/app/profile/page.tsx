@@ -68,7 +68,7 @@ export default function ProfilePage() {
 
   if (loadError) {
     return (
-      <div className="page">
+      <div className="page min-h-[calc(100vh-7rem)]">
         <div className="mx-auto max-w-md">
           <ErrorAlert message={loadError} />
         </div>
@@ -77,7 +77,7 @@ export default function ProfilePage() {
   }
   if (!profile) {
     return (
-      <div className="page">
+      <div className="page min-h-[calc(100vh-7rem)]">
         <ProfileSkeleton />
       </div>
     );
@@ -114,7 +114,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="page">
+    <div className="page min-h-[calc(100vh-7rem)]">
       <div className="mx-auto max-w-2xl space-y-6">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>

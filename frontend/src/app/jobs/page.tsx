@@ -10,6 +10,7 @@ import { JobFilterPanel } from "@/components/JobFilterPanel";
 import { Collapse } from "@/components/Collapse";
 import { EMPLOYMENT_LABELS } from "@/components/EmploymentTypeSelector";
 import { JobsSkeleton } from "@/components/Skeleton";
+import { ScrollToTopButton } from "@/components/ScrollToTopButton";
 import {
   getJobsForMe,
   peekJobs,
@@ -217,7 +218,7 @@ export default function JobsPage() {
               type="button"
               onClick={() => setFilterOpen((open) => !open)}
               aria-expanded={filterOpen}
-              className="btn btn-outline btn-md group shrink-0 dark:bg-muted dark:hover:bg-border"
+              className="btn btn-outline btn-md group shrink-0"
             >
               <Icon name="sliders" className="icon-nudge-up h-4 w-4" />
               Filter
@@ -290,6 +291,9 @@ export default function JobsPage() {
                 )}
               </div>
             )}
+
+            {/* Floating back-to-top, appears once the user has scrolled down the list. */}
+            <ScrollToTopButton />
           </>
         )}
       </div>

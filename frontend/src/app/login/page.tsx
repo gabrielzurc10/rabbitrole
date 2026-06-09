@@ -18,6 +18,7 @@ import {
 } from "@/lib/auth";
 import { getProfile, warmUp } from "@/lib/api";
 import { setSigningIn } from "@/lib/signingStatus";
+import { WaveBackground } from "@/components/WaveBackground";
 
 function LoginCard() {
   const router = useRouter();
@@ -150,6 +151,7 @@ function LoginCard() {
   if (exchanging) {
     return (
       <div className="page">
+        <WaveBackground />
         <div className="mx-auto flex min-h-[40vh] max-w-md flex-col items-center justify-center text-center">
           <div className="relative flex h-16 w-16 items-center justify-center">
             <span className="absolute inset-0 rounded-full border-4 border-muted border-t-primary motion-safe:animate-spin" />
@@ -162,8 +164,9 @@ function LoginCard() {
 
   return (
     <div className="page">
+      <WaveBackground />
       <div className="mx-auto max-w-md">
-        <Card className="motion-safe:animate-[slide-up_0.4s_ease-out_both]">
+        <Card className="bg-background dark:bg-[hsl(222_40%_18%)] motion-safe:animate-[slide-up_0.4s_ease-out_both]">
           <CardBody>
             <h1 className="text-center text-2xl font-semibold tracking-tight">
               Welcome to rabbit<span className="gradient-text">role</span>
@@ -175,16 +178,17 @@ function LoginCard() {
             {step === "choose" ? (
               <>
                 <div className="mt-6">
-                  <Button variant="outline" className="w-full" disabled={busy} onClick={startGoogle}>
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    disabled={busy}
+                    onClick={startGoogle}
+                  >
                     Continue with Google
                   </Button>
                 </div>
 
-                <div className="my-5 flex items-center gap-3 text-xs text-muted-foreground">
-                  <span className="h-px flex-1 bg-border" />
-                  or
-                  <span className="h-px flex-1 bg-border" />
-                </div>
+                <div className="my-5 text-center text-xs text-muted-foreground">or</div>
 
                 <form onSubmit={sendCode} className="space-y-3">
                   <input
@@ -218,7 +222,7 @@ function LoginCard() {
                   autoComplete="one-time-code"
                   required
                   className="input text-center tracking-[0.3em]"
-                  placeholder="000000"
+                  placeholder="000000000"
                   value={code}
                   onChange={(e) => setCode(e.target.value)}
                   autoFocus

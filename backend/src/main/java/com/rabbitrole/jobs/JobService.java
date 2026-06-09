@@ -46,33 +46,58 @@ public class JobService {
 
     /**
      * Postings matching the whole profile: every target role × (a remote search when
-     * {@code remote}, else each city), merged + deduped, filtered to the chosen
-     * employment types, then ranked against the resume. We search the bare role so the
-     * candidate pool stays broad. Each query is best-effort.
+     * {@code remote}, else each city), interleaved round-robin across the roles, then
+     * deduped, filtered to the chosen employment types, and ranked against the resume.
+     * We search the bare role so the candidate pool stays broad. Each query is best-effort.
+     *
+     * <p>Interleaving is what makes the frontend's "10 at a time" list a blend of the
+     * roles: with roles [Software Engineer, Backend Engineer] the first page alternates
+     * one from each rather than showing all of the first role before the second. A page
+     * here is one JSearch page (10) per query; the frontend reveals them ten at a time and
+     * asks for the next {@code page} as the user scrolls.
      */
     public List<Job> forProfile(Profile profile, String resumeText, int page) {
-        Map<String, Job> merged = new LinkedHashMap<>();
+        // Gather each role's postings separately (its remote/per-city batches, flattened),
+        // bounded overall by MAX_QUERIES, so we can interleave them below.
+        List<List<Job>> perRole = new ArrayList<>();
         int queries = 0;
-
         outer:
         for (String role : profile.targetRoles()) {
+            List<Job> roleJobs = new ArrayList<>();
+            perRole.add(roleJobs);
             for (List<Job> batch : queriesFor(role, profile, page)) {
                 if (queries++ >= MAX_QUERIES) {
                     break outer;
                 }
-                for (Job job : batch) {
-                    // Dedupe on content, not the source's id: the same posting is often
-                    // cross-listed (e.g. across cities, or reposted) under different ids.
-                    merged.putIfAbsent(dedupKey(job), job);
-                }
+                roleJobs.addAll(batch);
             }
         }
 
-        List<Job> jobs = filterToProfile(new ArrayList<>(merged.values()), profile);
+        List<Job> jobs = filterToProfile(new ArrayList<>(interleave(perRole).values()), profile);
         if (resumeText == null || resumeText.isBlank() || jobs.isEmpty()) {
             return jobs; // unscored when there's no resume to rank against
         }
         return scorer.score(resumeText, jobs);
+    }
+
+    /**
+     * Round-robins the per-role lists into a single deduped order: the i-th posting of
+     * every role before any role's (i+1)-th, so the merged stream blends the roles instead
+     * of running one to exhaustion first. Dedupe is on content, not the source's id: the
+     * same posting is often cross-listed (across cities, or reposted) under different ids,
+     * and the first occurrence (highest-priority role, earliest query) wins.
+     */
+    private Map<String, Job> interleave(List<List<Job>> perRole) {
+        Map<String, Job> merged = new LinkedHashMap<>();
+        int depth = perRole.stream().mapToInt(List::size).max().orElse(0);
+        for (int i = 0; i < depth; i++) {
+            for (List<Job> roleJobs : perRole) {
+                if (i < roleJobs.size()) {
+                    merged.putIfAbsent(dedupKey(roleJobs.get(i)), roleJobs.get(i));
+                }
+            }
+        }
+        return merged;
     }
 
     /**

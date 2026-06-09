@@ -3,7 +3,6 @@
 import { useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Icon } from "@/components/ui/icon";
 import { AuthButton } from "@/components/layout/AuthButton";
 import { NavTabs } from "@/components/layout/NavTabs";
 import { MobileMenu } from "@/components/layout/MobileMenu";
@@ -24,18 +23,17 @@ export function Navbar() {
         {lockBrand ? (
           // Same mark, but a plain span — no link, no hover hop — so it does nothing.
           <span className="brand justify-self-start select-none">
-            <Icon name="rabbit" className="text-primary" />
-            <span>
+            {/* eslint-disable-next-line @next/next/no-img-element -- static export, unoptimized */}
+            <img src="/icons/rabbitrole.png" alt="" className="h-12 w-auto" />
+            <span className="-ml-4">
               rabbit<span className="gradient-text">role</span>
             </span>
           </span>
         ) : (
-          <Link href="/" className="brand group justify-self-start">
-            <Icon
-              name="rabbit"
-              className="text-primary motion-safe:group-hover:animate-[hop_0.6s_ease-in-out]"
-            />
-            <span>
+          <Link href="/" className="brand justify-self-start">
+            {/* eslint-disable-next-line @next/next/no-img-element -- static export, unoptimized */}
+            <img src="/icons/rabbitrole.png" alt="" className="h-12 w-auto" />
+            <span className="-ml-4">
               rabbit<span className="gradient-text">role</span>
             </span>
           </Link>

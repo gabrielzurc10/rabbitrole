@@ -36,7 +36,7 @@ export function ResumeUploader({
       )}
     >
       {/* The file input is hidden inside the label. */}
-      <label className="btn btn-outline btn-md group cursor-pointer dark:bg-muted dark:hover:bg-border">
+      <label className="btn btn-outline btn-md group cursor-pointer">
         <Icon
           name="upload"
           className="h-4 w-4 transition-transform duration-200 ease-out group-hover:-translate-y-1 motion-reduce:transform-none"

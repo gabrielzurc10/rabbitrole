@@ -90,7 +90,7 @@ export function CityProximityEditor({
               <div
                 key={keyOf(c)}
                 className={cn(
-                  "chip chip-enter relative transition-transform duration-150 hover:z-10 hover:scale-110 motion-reduce:transform-none",
+                  "chip chip-enter",
                   isLeaving && "chip-leave",
                 )}
                 onAnimationEnd={() => {

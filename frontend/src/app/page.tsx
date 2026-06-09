@@ -2,40 +2,56 @@ import { Icon } from "@/components/ui/icon";
 import { HeroCta } from "@/components/HeroCta";
 import { LandingGate } from "@/components/LandingGate";
 import { Reveal } from "@/components/Reveal";
+import { WaveBackground } from "@/components/WaveBackground";
+import { SHOWCASE_DEMOS } from "@/components/ShowcaseDemos";
 import { cn } from "@/lib/cn";
 
 const STEPS = [
   {
     icon: "upload",
     title: "Upload your resume",
-    body: "Drop in a PDF or Word doc. We extract the text — no manual copy-paste.",
-    image: "/showcase/upload-resume.png",
-    alt: "Resume score card showing an 85% score graded against a Software Engineer role, with view and download actions.",
+    body: "Drop in a PDF or Word doc. We extract the text, no manual copy/paste.",
+    features: [
+      "PDF, DOC, or DOCX up to 5MB",
+      "Automatic text extraction — no copy/paste",
+      "Pick one or more target roles; your primary role drives the score",
+      "Re-upload a new version anytime to re-analyze",
+    ],
   },
   {
     icon: "sparkles",
     title: "Get AI feedback",
     body: "Interactive tags grouped by severity, each with why it matters and a suggested fix.",
-    image: "/showcase/ai-feedback.png",
-    alt: "Suggested improvements grouped by severity — critical, warning, and optional — each an interactive tag.",
+    features: [
+      "Overall score out of 100, graded against your target role",
+      "Issues grouped by severity: critical, warning, and optional",
+      "Tap any tag for why it matters and a suggested replacement",
+      "Grounded in live postings for your role, so advice stays relevant",
+    ],
   },
   {
     icon: "briefcase",
     title: "Match live jobs",
     body: "See real openings for your target role, ranked by how well your resume fits.",
-    image: "/showcase/match-jobs.png",
-    alt: "Matched live job postings, each with a resume match percentage and an apply link.",
+    features: [
+      "Live openings aggregated from Google for Jobs",
+      "A resume match % on every posting, ranked best-fit first",
+      "Filter by remote, employment type, and location",
+      "Direct apply links and employer logos",
+      "“Why this match?” reasoning on demand for any role",
+    ],
   },
 ];
 
 export default function Home() {
   return (
     <LandingGate>
+      <WaveBackground />
       <div className="page">
         {/* Hero — centered in the first screen; the showcase sits below the fold. */}
         <section className="flex min-h-[calc(100vh-7rem)] items-center justify-center pb-20 sm:pb-28">
           <div className="mx-auto max-w-3xl text-center motion-safe:animate-[slide-up_0.4s_ease-out_both]">
-            <span className="badge badge-neutral mb-5">
+            <span className="badge badge-glass mb-5">
               <Icon name="sparkles" className="h-3.5 w-3.5 text-primary" />
               AI resume reviewer &amp; job matcher
             </span>
@@ -43,7 +59,7 @@ export default function Home() {
               Fall down the rabbit<span className="gradient-text">role</span> and
               land the interview
             </h1>
-            <p className="mx-auto mt-4 max-w-xl text-pretty text-lg text-muted-foreground">
+            <p className="mx-auto mt-4 max-w-xl text-pretty text-lg text-foreground/80">
               Upload your resume and pick a role. Get clear, prioritized feedback on
               what to fix, then see the live jobs you genuinely match.
             </p>
@@ -53,36 +69,78 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Showcase: alternating feature rows, each revealing on scroll */}
-        <section className="mx-auto mt-20 max-w-5xl space-y-28 sm:mt-28 sm:space-y-40">
-          {STEPS.map((step, i) => {
-            const imageRight = i % 2 === 0; // even rows: text left / image right
-            return (
-              <Reveal key={step.title}>
-                <div className="grid items-center gap-8 sm:grid-cols-2 sm:gap-12">
-                  {/* Text */}
-                  <div className={cn(imageRight ? "sm:order-1" : "sm:order-2")}>
-                    <span className="mb-4 inline-flex h-11 w-11 items-center justify-center rounded-full bg-primary/10 text-primary">
-                      <Icon name={step.icon} className="h-5 w-5" />
-                    </span>
-                    <h2 className="text-2xl font-semibold tracking-tight">{step.title}</h2>
-                    <p className="mt-2 text-pretty text-muted-foreground">{step.body}</p>
-                  </div>
+        {/* How it works */}
+        <section id="how-it-works" className="mx-auto mt-12 max-w-6xl scroll-mt-24 sm:mt-20">
+          <Reveal className="mx-auto max-w-2xl text-center">
+            <p className="text-sm font-semibold uppercase tracking-widest text-primary">
+              How it works
+            </p>
+            <h2 className="mt-3 text-balance text-3xl font-semibold tracking-tight sm:text-4xl">
+              From resume to interview, in three steps
+            </h2>
+            <p className="mx-auto mt-4 max-w-xl text-pretty text-foreground/80">
+              No guesswork — rabbitrole grades your resume, tells you exactly what to fix,
+              and surfaces the live jobs you actually match.
+            </p>
+          </Reveal>
 
-                  {/* Screenshot in a soft card frame */}
-                  <div
-                    className={cn(
-                      "overflow-hidden rounded-xl border border-border bg-card shadow-[0_0_15px_rgba(0,0,0,0.1)]",
-                      imageRight ? "sm:order-2" : "sm:order-1",
-                    )}
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element -- static export, images unoptimized */}
-                    <img src={step.image} alt={step.alt} loading="lazy" className="block h-auto w-full" />
+          {/* Alternating feature rows, each revealing on scroll */}
+          <div className="mt-16 space-y-28 sm:mt-24 sm:space-y-36">
+            {STEPS.map((step, i) => {
+              const imageRight = i % 2 === 0; // even rows: text left / demo right
+              const Demo = SHOWCASE_DEMOS[i];
+              return (
+                <Reveal key={step.title}>
+                  <div className="grid items-center gap-8 sm:grid-cols-2 sm:gap-14">
+                    {/* Text */}
+                    <div className={cn(imageRight ? "sm:order-1" : "sm:order-2")}>
+                      <div className="mb-4 flex items-center gap-3">
+                        <span className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-primary/10 text-primary">
+                          <Icon name={step.icon} className="h-5 w-5" />
+                        </span>
+                        <span className="text-sm font-semibold uppercase tracking-wide text-primary">
+                          Step 0{i + 1}
+                        </span>
+                      </div>
+                      <h3 className="text-2xl font-semibold tracking-tight">{step.title}</h3>
+                      <p className="mt-2 text-pretty text-foreground/80">{step.body}</p>
+                      <ul className="mt-5 space-y-2.5">
+                        {step.features.map((feature) => (
+                          <li key={feature} className="flex items-start gap-2.5 text-sm text-foreground/90">
+                            <Icon name="check-circle" className="mt-0.5 h-4 w-4 shrink-0 text-foreground" />
+                            <span className="text-pretty">{feature}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    {/* Live animated demo (recreates the product UI) */}
+                    <div className={cn(imageRight ? "sm:order-2" : "sm:order-1")}>
+                      <Demo />
+                    </div>
                   </div>
-                </div>
-              </Reveal>
-            );
-          })}
+                </Reveal>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* Closing call-to-action */}
+        <section className="mx-auto mt-28 max-w-4xl sm:mt-36">
+          <Reveal>
+            <div className="rounded-3xl bg-background p-10 text-center shadow-[0_18px_50px_-12px_rgba(0,0,0,0.25)] dark:bg-[hsl(222_40%_18%)] sm:p-14">
+              <h2 className="text-balance text-2xl font-semibold tracking-tight sm:text-3xl">
+                Ready to land your next role?
+              </h2>
+              <p className="mx-auto mt-3 max-w-md text-pretty text-foreground/80">
+                Upload your resume and get prioritized, role-specific feedback — plus the
+                jobs you match — in minutes.
+              </p>
+              <div className="mt-7 flex justify-center">
+                <HeroCta />
+              </div>
+            </div>
+          </Reveal>
         </section>
       </div>
     </LandingGate>

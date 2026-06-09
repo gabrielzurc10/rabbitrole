@@ -10,7 +10,7 @@ import { ScoreSummary } from "@/components/ScoreSummary";
 import { TagList } from "@/components/TagList";
 import { ResumeCard } from "@/components/ResumeCard";
 import { ResumeUploader } from "@/components/ResumeUploader";
-import { RoleEditorCard } from "@/components/RoleEditorCard";
+import { ResumeEditorCard } from "@/components/ResumeEditorCard";
 import { AnalyzingDoc } from "@/components/AnalyzingDoc";
 import { ResumeReviewSkeleton, ReviewBodySkeleton } from "@/components/Skeleton";
 import { getAnalysis, getProfile, peekProfile, ApiError } from "@/lib/api";
@@ -177,19 +177,19 @@ function ResumeResult() {
               </Card>
             )}
 
-            {hasAnalysis && <RoleEditorCard profile={profile} onSaved={setProfile} />}
-
-            <Card>
-              <CardBody className="space-y-3">
-                <CardTitle>{hasAnalysis ? "Update your resume" : "Upload your resume"}</CardTitle>
-                <CardSubtitle>
-                  {hasAnalysis
-                    ? "Upload a new version to start analyzing."
-                    : "Upload a resume to start analyzing."}
-                </CardSubtitle>
-                <ResumeUploader onFile={reAnalyze} />
-              </CardBody>
-            </Card>
+            {hasAnalysis ? (
+              /* Target roles + resume upload in one card; nothing re-analyzes until
+                 the user clicks Save & Analyze. */
+              <ResumeEditorCard profile={profile} onSaved={setProfile} />
+            ) : (
+              <Card>
+                <CardBody className="space-y-3">
+                  <CardTitle>Upload your resume</CardTitle>
+                  <CardSubtitle>Upload a resume to start analyzing.</CardSubtitle>
+                  <ResumeUploader onFile={reAnalyze} />
+                </CardBody>
+              </Card>
+            )}
 
             {hasAnalysis &&
               (analysis ? (
