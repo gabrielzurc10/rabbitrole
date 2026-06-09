@@ -24,6 +24,10 @@ export function RoleChipInput({
   // Roles mid-exit-animation: kept rendered (with the leave class) until the
   // animation ends, then actually dropped from `value`.
   const [leaving, setLeaving] = useState<string[]>([]);
+  // Roles already present at mount must NOT play the enter pop — otherwise they wiggle in
+  // every time the page loads / the editor remounts. Only roles added afterwards animate.
+  // (useState initializer = captured once at mount, and render-safe to read.)
+  const [initialRoles] = useState(() => new Set(value));
 
   // FLIP: when the chips reorder (e.g. one is promoted to primary), slide each from its
   // old position to its new one. Positions are measured *relative to the chip container*,
@@ -122,7 +126,8 @@ export function RoleChipInput({
                   else chipRefs.current.delete(role);
                 }}
                 className={cn(
-                  "chip chip-enter relative transition-transform duration-150 hover:z-10 hover:scale-110 motion-reduce:transform-none",
+                  "chip relative transition-transform duration-150 hover:z-10 hover:scale-110 motion-reduce:transform-none",
+                  !initialRoles.has(role) && "chip-enter", // only newly-added roles pop in
                   i === 0 && "chip-primary",
                   isLeaving && "chip-leave",
                 )}
