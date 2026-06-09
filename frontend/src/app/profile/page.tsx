@@ -123,10 +123,10 @@ export default function ProfilePage() {
           </div>
           <Button
             variant="outline"
-            className="dark:bg-muted dark:hover:bg-border"
+            className="group dark:bg-muted dark:hover:bg-border"
             onClick={() => setSignOutOpen(true)}
           >
-            <Icon name="log-out" className="h-4 w-4" />
+            <Icon name="log-out" className="icon-nudge-right h-4 w-4" />
             Sign out
           </Button>
         </div>
@@ -157,7 +157,12 @@ export default function ProfilePage() {
             </div>
 
             <div className="space-y-3">
-              <Button onClick={save} disabled={!canSave || saving}>
+              <Button
+                onClick={save}
+                disabled={!canSave || saving}
+                className="group hover:opacity-100"
+              >
+                <Icon name="save" className="icon-nudge-up h-4 w-4" />
                 {saving ? "Saving…" : "Save changes"}
               </Button>
               {saveError && <ErrorAlert message={saveError} />}
@@ -185,8 +190,12 @@ export default function ProfilePage() {
                 Permanently removes your profile, resume, and analyses.
               </CardSubtitle>
             </div>
-            <Button variant="outline" className="text-critical" onClick={() => setDeleteOpen(true)}>
-              <Icon name="trash" className="h-4 w-4" />
+            <Button
+              variant="outline"
+              className="group text-critical"
+              onClick={() => setDeleteOpen(true)}
+            >
+              <Icon name="trash" className="icon-nudge-up h-4 w-4" />
               Delete account
             </Button>
           </CardBody>
@@ -204,7 +213,7 @@ export default function ProfilePage() {
           </Button>
           <Button
             // bg-none drops btn-primary's gradient so the critical background shows.
-            className="bg-none bg-critical text-white hover:bg-critical/90"
+            className="group bg-none bg-critical text-white hover:opacity-100"
             onClick={confirmDelete}
             disabled={deleting}
           >
@@ -214,7 +223,10 @@ export default function ProfilePage() {
                 Deleting…
               </>
             ) : (
-              "Delete everything"
+              <>
+                <Icon name="trash" className="icon-nudge-up h-4 w-4" />
+                Delete everything
+              </>
             )}
           </Button>
         </div>
@@ -229,8 +241,12 @@ export default function ProfilePage() {
           <Button variant="ghost" onClick={() => setSignOutOpen(false)}>
             Cancel
           </Button>
-          <Button onClick={() => logout()}>
-            <Icon name="log-out" className="h-4 w-4" />
+          <Button
+            // bg-none drops btn-primary's gradient so the critical background shows.
+            onClick={() => logout()}
+            className="group bg-none bg-critical text-white hover:opacity-100"
+          >
+            <Icon name="log-out" className="icon-nudge-right h-4 w-4" />
             Sign out
           </Button>
         </div>

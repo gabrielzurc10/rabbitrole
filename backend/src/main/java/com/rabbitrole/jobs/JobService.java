@@ -50,13 +50,13 @@ public class JobService {
      * employment types, then ranked against the resume. We search the bare role so the
      * candidate pool stays broad. Each query is best-effort.
      */
-    public List<Job> forProfile(Profile profile, String resumeText) {
+    public List<Job> forProfile(Profile profile, String resumeText, int page) {
         Map<String, Job> merged = new LinkedHashMap<>();
         int queries = 0;
 
         outer:
         for (String role : profile.targetRoles()) {
-            for (List<Job> batch : queriesFor(role, profile)) {
+            for (List<Job> batch : queriesFor(role, profile, page)) {
                 if (queries++ >= MAX_QUERIES) {
                     break outer;
                 }
@@ -81,21 +81,21 @@ public class JobService {
      * city/state, so a per-city search can't narrow them. A remote search is therefore a
      * single global query; only a non-remote search fans out per city (or all locations).
      */
-    private List<List<Job>> queriesFor(String role, Profile profile) {
+    private List<List<Job>> queriesFor(String role, Profile profile, int page) {
         List<EmploymentType> types = profile.employmentTypes();
         List<List<Job>> batches = new ArrayList<>();
         if (profile.remote()) {
-            batches.add(safeSearch(role, null, true, types)); // one global remote query
+            batches.add(safeSearch(role, null, true, types, page)); // one global remote query
             return batches;
         }
         if (profile.cities() != null) {
             for (CityPreference c : profile.cities()) {
-                batches.add(safeSearch(role, c.city() + ", " + c.state(), false, types));
+                batches.add(safeSearch(role, c.city() + ", " + c.state(), false, types, page));
             }
         }
         if (batches.isEmpty()) {
             // No cities = "all locations": a search with no location filter.
-            batches.add(safeSearch(role, null, false, types));
+            batches.add(safeSearch(role, null, false, types, page));
         }
         return batches;
     }
@@ -127,9 +127,11 @@ public class JobService {
         return s == null ? "" : s;
     }
 
-    private List<Job> safeSearch(String role, String where, boolean remote, List<EmploymentType> types) {
+    private List<Job> safeSearch(String role, String where, boolean remote,
+                                 List<EmploymentType> types, int page) {
         try {
-            return client.search(role, where, remote, types);
+            // Callers page 0-based; JSearch is 1-based.
+            return client.search(role, where, remote, types, page + 1);
         } catch (RuntimeException e) {
             return List.of();
         }

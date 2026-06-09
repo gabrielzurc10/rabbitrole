@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Job } from "@/types";
 import { MatchRing } from "@/components/MatchRing";
 import { Skeleton } from "@/components/Skeleton";
+import { Collapse } from "@/components/Collapse";
 import { EMPLOYMENT_LABELS } from "@/components/EmploymentTypeSelector";
 import { ErrorAlert } from "@/components/ui/alert";
 import { Icon } from "@/components/ui/icon";
@@ -150,7 +151,7 @@ export function JobCard({ job }: { job: Job }) {
               {isRemote && (
                 <span className="job-meta-item col-start-2 row-start-1 justify-self-center">
                   <Icon name="monitor" className="h-4 w-4" />
-                  Remote eligible
+                  Remote
                 </span>
               )}
               {employmentLabel && (
@@ -177,38 +178,42 @@ export function JobCard({ job }: { job: Job }) {
 
         {/* Actions */}
         <div className="job-card-rule" />
-        <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="job-card-actions">
           <button
             type="button"
             onClick={toggleReasoning}
             aria-expanded={expanded}
-            className="job-reason-toggle"
+            aria-label="Why this match?"
+            className="job-reason-toggle group"
           >
-            <Icon name="sparkles" className="h-4 w-4" />
-            Why this match?
+            {/* Info icon always; the "Why this match?" label only shows from sm up. */}
+            <Icon name="info" className="icon-nudge-up h-4 w-4 shrink-0" />
+            <span className="hidden truncate sm:inline">Why this match?</span>
             <Icon
               name="chevron-down"
-              className={cn("h-4 w-4 transition-transform", expanded && "rotate-180")}
+              className={cn("h-4 w-4 shrink-0 transition-transform", expanded && "rotate-180")}
             />
           </button>
-          <div className="flex items-center gap-3">
+          <div className="flex shrink-0 items-center gap-3">
             {job.publisher && (
-              <span className="text-xs text-muted-foreground">via {job.publisher}</span>
+              <span className="truncate text-xs text-muted-foreground">via {job.publisher}</span>
             )}
             <a
               href={job.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="btn btn-primary btn-sm"
+              className="btn btn-primary btn-sm group"
             >
               Apply
-              <Icon name="arrow-right" className="h-4 w-4" />
+              <Icon name="arrow-right" className="icon-nudge-right h-4 w-4" />
             </a>
           </div>
         </div>
 
-        {expanded && (
-          <div className="job-reason-panel motion-safe:animate-[slide-up_0.2s_ease-out]">
+        {/* Animate the card's height as the reasoning opens/closes. `!mt-0` cancels the
+            parent's space-y gap; the inner panel's own mt-4 collapses with the content. */}
+        <Collapse open={expanded} bleedShadow={false} className="!mt-0">
+          <div className="job-reason-panel mt-4">
             {loading && (
               <div className="space-y-2" aria-label="Loading reasoning" role="status">
                 <Skeleton className="h-3 w-full" />
@@ -219,7 +224,7 @@ export function JobCard({ job }: { job: Job }) {
             {error && <ErrorAlert message={error} />}
             {reasoning && <p className="text-sm text-muted-foreground">{reasoning}</p>}
           </div>
-        )}
+        </Collapse>
       </div>
 
       {/* Match panel */}

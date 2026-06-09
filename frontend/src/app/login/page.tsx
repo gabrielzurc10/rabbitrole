@@ -1,6 +1,7 @@
 "use client";
 
 import { type FormEvent, Suspense, useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Icon } from "@/components/ui/icon";
 import { Card, CardBody } from "@/components/ui/card";
@@ -111,12 +112,11 @@ function LoginCard() {
   async function sendCode(e?: FormEvent) {
     e?.preventDefault();
     setError(null);
-    if (!isConfigured) {
-      proceed(); // demo mode: no real OTP
-      return;
-    }
     setBusy(true);
     try {
+      // Demo/local mode: requestEmailCode is a no-op, so this just advances to the code
+      // step — letting you walk through the OTP flow/page without a real provider. Any
+      // code is accepted on verify.
       await requestEmailCode(email.trim());
       setStep("code");
     } catch (err) {
@@ -187,8 +187,8 @@ function LoginCard() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                   />
-                  <Button type="submit" className="w-full" disabled={busy}>
-                    <Icon name="mail" className="h-4 w-4" />
+                  <Button type="submit" className="group w-full hover:opacity-100" disabled={busy}>
+                    <Icon name="mail" className="icon-nudge-up h-4 w-4" />
                     {busy ? "Sending…" : "Email me a code"}
                   </Button>
                 </form>
@@ -196,8 +196,14 @@ function LoginCard() {
             ) : (
               <form onSubmit={verify} className="mt-6 space-y-3">
                 <p className="text-center text-sm text-muted-foreground">
-                  We emailed a code to{" "}
-                  <span className="font-medium text-foreground">{email}</span>.
+                  {isConfigured ? (
+                    <>
+                      We emailed a code to{" "}
+                      <span className="font-medium text-foreground">{email}</span>.
+                    </>
+                  ) : (
+                    <>Demo mode — enter any code to continue.</>
+                  )}
                 </p>
                 <input
                   inputMode="numeric"
@@ -209,7 +215,8 @@ function LoginCard() {
                   onChange={(e) => setCode(e.target.value)}
                   autoFocus
                 />
-                <Button type="submit" className="w-full" disabled={busy}>
+                <Button type="submit" className="group w-full hover:opacity-100" disabled={busy}>
+                  <Icon name="log-in" className="icon-nudge-right h-4 w-4" />
                   {busy ? "Verifying…" : "Verify & sign in"}
                 </Button>
                 <div className="flex justify-between text-xs text-muted-foreground">
@@ -242,6 +249,18 @@ function LoginCard() {
               {isConfigured
                 ? "Passwordless — we email you a one-time code."
                 : "Demo mode: no sign-in configured locally."}
+            </p>
+
+            <p className="mt-3 text-center text-xs text-muted-foreground">
+              By continuing, you agree to our{" "}
+              <Link href="/terms/" className="legal-link">
+                Terms
+              </Link>{" "}
+              and{" "}
+              <Link href="/privacy/" className="legal-link">
+                Privacy Policy
+              </Link>
+              .
             </p>
           </CardBody>
         </Card>

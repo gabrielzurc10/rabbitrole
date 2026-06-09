@@ -6,6 +6,7 @@ const badge = cva("badge", {
   variants: {
     variant: {
       neutral: "badge-neutral",
+      primary: "badge-primary",
       critical: "badge-critical",
       warning: "badge-warning",
       optional: "badge-optional",

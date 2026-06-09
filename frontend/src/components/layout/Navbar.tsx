@@ -13,8 +13,11 @@ export function Navbar() {
   return (
     <header className="navbar">
       <div className="navbar-inner">
-        <Link href="/" className="brand justify-self-start">
-          <Icon name="rabbit" className="text-primary" />
+        <Link href="/" className="brand group justify-self-start">
+          <Icon
+            name="rabbit"
+            className="text-primary motion-safe:group-hover:animate-[hop_0.6s_ease-in-out]"
+          />
           <span>
             rabbit<span className="gradient-text">role</span>
           </span>

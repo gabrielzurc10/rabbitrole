@@ -19,13 +19,38 @@
   .brand {
     @apply flex items-center gap-2 text-lg font-semibold tracking-tight;
   }
+  .site-footer {
+    @apply mt-16 border-t border-border;
+  }
+  .site-footer-inner {
+    @apply mx-auto flex max-w-5xl flex-col items-center justify-between gap-3 px-4
+      py-6 text-sm text-muted-foreground sm:flex-row sm:px-6 lg:px-8;
+  }
+  .site-footer-copy {
+    @apply text-xs;
+  }
+  .site-footer-links {
+    @apply flex items-center gap-5;
+  }
+  .site-footer-link {
+    /* Same grow-in underline as the legal links, plus the colour shift on hover. */
+    @apply text-muted-foreground hover:text-foreground;
+    background-image: linear-gradient(currentColor, currentColor);
+    background-position: 0 100%;
+    background-repeat: no-repeat;
+    background-size: 0% 1.5px;
+    transition: background-size 0.2s ease-out, color 0.15s ease;
+  }
+  .site-footer-link:hover {
+    background-size: 100% 1.5px;
+  }
   .gradient-text {
     @apply bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent;
   }
 
   /* ---------- button ---------- */
   .btn {
-    @apply inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg
+    @apply inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full
       text-sm font-medium transition-colors duration-150
       focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
       focus-visible:ring-offset-2 focus-visible:ring-offset-background
@@ -60,7 +85,7 @@
   /* ---------- card ---------- */
   .card {
     /* Centered (0-offset) shadow so the glow is even on all four edges. */
-    @apply rounded-xl bg-card text-card-foreground shadow-[0_0_15px_rgba(0,0,0,0.1)];
+    @apply rounded-2xl bg-card text-card-foreground shadow-[0_0_15px_rgba(0,0,0,0.1)];
   }
   .card-pad {
     @apply p-6;
@@ -78,7 +103,13 @@
       text-xs font-medium;
   }
   .badge-neutral {
-    @apply bg-muted text-muted-foreground;
+    /* Dark: --muted is almost the card/page colour, so the tag disappears — use a
+       slightly lighter grey (L≈22%) with bright text so it stands out. */
+    @apply bg-muted text-muted-foreground
+      dark:bg-[hsl(215_16%_22%)] dark:text-foreground;
+  }
+  .badge-primary {
+    @apply bg-primary/10 text-primary;
   }
   .badge-critical {
     @apply bg-critical/10 text-critical;
@@ -92,15 +123,14 @@
 
   /* ---------- job card ---------- */
   .job-card {
-    @apply flex flex-col overflow-hidden rounded-xl bg-card text-card-foreground
-      shadow-[0_0_15px_rgba(0,0,0,0.1)] transition-shadow
-      hover:shadow-[0_0_22px_rgba(0,0,0,0.14)] sm:flex-row;
+    @apply flex flex-col overflow-hidden rounded-2xl bg-card text-card-foreground
+      shadow-[0_0_15px_rgba(0,0,0,0.1)] sm:flex-row;
   }
   .job-card-main {
     @apply min-w-0 flex-1 space-y-4 p-5;
   }
   .job-card-logo {
-    @apply h-11 w-11 shrink-0 rounded-lg border border-border bg-background object-contain;
+    @apply h-11 w-11 shrink-0 rounded-full bg-background object-contain;
   }
   .job-card-title {
     @apply truncate font-semibold leading-tight;
@@ -120,7 +150,7 @@
   .job-card-match {
     @apply flex shrink-0 flex-col items-center justify-center gap-2 border-t border-border
       bg-gradient-to-br from-primary/15 via-accent/10 to-transparent p-5 text-center
-      sm:w-44 sm:border-l sm:border-t-0;
+      sm:w-44 sm:border-t-0;
   }
   .job-card-match-label {
     @apply text-xs font-semibold uppercase tracking-wide text-muted-foreground;
@@ -128,9 +158,13 @@
   .job-meta-item {
     @apply inline-flex items-center gap-1.5 text-sm text-muted-foreground;
   }
+  .job-card-actions {
+    /* "Why this match?" on the left, Apply on the right — kept on one row at
+       every width (the toggle truncates before it wraps). */
+    @apply flex flex-row items-center justify-between gap-2;
+  }
   .job-reason-toggle {
-    @apply inline-flex items-center gap-1.5 text-sm font-medium text-primary
-      transition-colors hover:text-primary/80
+    @apply inline-flex min-w-0 items-center gap-1.5 text-xs font-medium text-primary
       focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
       focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded;
   }
@@ -138,25 +172,74 @@
     @apply mt-2 rounded-lg bg-muted/50 p-3;
   }
 
+  /* ---------- legal pages (terms / privacy) ---------- */
+  .legal {
+    @apply mx-auto w-full max-w-3xl px-4 py-10 sm:px-6 lg:px-8;
+  }
+  .legal-title {
+    @apply text-2xl font-semibold tracking-tight;
+  }
+  .legal-updated {
+    @apply mt-1 text-sm text-muted-foreground;
+  }
+  .legal-prose {
+    @apply mt-8 space-y-4 text-sm leading-relaxed text-muted-foreground;
+  }
+  .legal-heading {
+    @apply mt-8 text-base font-semibold text-foreground;
+  }
+  .legal-link {
+    /* Underline grows in from the left on hover (a gradient sized 0% -> 100% wide). */
+    @apply font-medium text-primary;
+    background-image: linear-gradient(currentColor, currentColor);
+    background-position: 0 100%;
+    background-repeat: no-repeat;
+    background-size: 0% 1.5px;
+    transition: background-size 0.2s ease-out;
+  }
+  .legal-link:hover {
+    background-size: 100% 1.5px;
+  }
+
   /* ---------- form ---------- */
   .label {
     @apply mb-1.5 block text-sm font-medium text-foreground;
   }
   .input {
-    @apply h-10 w-full rounded-lg border border-input bg-background px-3 text-sm
+    @apply h-10 w-full rounded-full border border-input bg-background px-4 text-sm
       placeholder:text-muted-foreground transition-colors
       focus-visible:outline-none focus-visible:border-ring focus-visible:ring-1 focus-visible:ring-ring;
   }
   .select {
-    @apply h-10 w-full appearance-none rounded-lg border border-input bg-background
-      px-3 pr-8 text-sm transition-colors
+    @apply h-10 w-full appearance-none rounded-full border border-input bg-background
+      px-4 pr-8 text-sm transition-colors
       focus-visible:outline-none focus-visible:border-ring focus-visible:ring-1 focus-visible:ring-ring;
+  }
+  /* Arrow icons that slide in their pointing direction when the parent (a `group`)
+     is hovered. Put `group` on the button/link and one of these on the icon. */
+  .icon-nudge-right {
+    @apply transition-transform duration-200 ease-out
+      group-hover:translate-x-1 motion-reduce:transform-none;
+  }
+  .icon-nudge-left {
+    @apply transition-transform duration-200 ease-out
+      group-hover:-translate-x-1 motion-reduce:transform-none;
+  }
+  .icon-nudge-up {
+    @apply transition-transform duration-200 ease-out
+      group-hover:-translate-y-1 motion-reduce:transform-none;
+  }
+  .icon-nudge-down {
+    @apply transition-transform duration-200 ease-out
+      group-hover:translate-y-1 motion-reduce:transform-none;
   }
 
   /* ---------- tag chip ---------- */
   .tag-chip {
-    @apply flex w-full items-start gap-3 rounded-lg border border-border bg-card
-      p-4 text-left transition-colors duration-150 hover:bg-muted/50
+    /* Borderless soft-shadow card; a subtle shadow lift on hover instead of a bg change. */
+    @apply flex w-full items-start gap-3 rounded-xl bg-card p-4 text-left
+      shadow-[0_0_15px_rgba(0,0,0,0.1)] transition-shadow duration-150
+      hover:shadow-[0_0_22px_rgba(0,0,0,0.14)]
       focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring;
   }
   .tag-dot {
@@ -169,7 +252,7 @@
   }
   .dialog-content {
     @apply fixed left-1/2 top-1/2 z-50 w-[92vw] max-w-lg -translate-x-1/2
-      -translate-y-1/2 rounded-xl border border-border bg-card p-6 shadow-lg
+      -translate-y-1/2 rounded-xl bg-card p-6 shadow-lg
       focus:outline-none;
   }
 
@@ -199,10 +282,15 @@
     @apply border-border text-muted-foreground;
   }
   .stepper-connector {
-    @apply mx-1.5 h-px flex-1 bg-border;
+    @apply relative mx-1.5 h-0.5 flex-1 overflow-hidden rounded-full bg-border;
   }
-  .stepper-connector-done {
-    @apply bg-primary;
+  /* Inner bar grows 0 -> 100% as the step is reached — the "progress" animation. */
+  .stepper-connector-fill {
+    @apply absolute inset-y-0 left-0 w-0 rounded-full bg-primary
+      transition-[width] duration-500 ease-out motion-reduce:transition-none;
+  }
+  .stepper-connector-fill-done {
+    @apply w-full;
   }
 
   /* ---------- segmented control (work mode) ---------- */
@@ -210,7 +298,7 @@
     @apply grid grid-cols-3 gap-2;
   }
   .segment {
-    @apply flex flex-col items-center justify-center gap-1.5 rounded-lg border
+    @apply flex flex-col items-center justify-center gap-1.5 rounded-full border
       border-border bg-background px-3 py-4 text-sm font-medium
       transition-colors hover:bg-muted
       focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring;
@@ -224,17 +312,30 @@
     /* inset-x-0 of its wrapper (the label span) so it underlines only the word. */
     @apply pointer-events-none absolute inset-x-0 -bottom-1 h-0.5 rounded-full bg-primary;
   }
+  .nav-spinner {
+    /* Replaces a tab's icon while a background analysis runs. */
+    @apply h-4 w-4 shrink-0 rounded-full border-2 border-muted border-t-primary;
+  }
   .theme-switch {
-    @apply inline-flex items-center gap-0.5 rounded-lg border border-border
-      bg-muted/60 p-0.5;
+    /* Dark: a near-black inset track so the lighter thumb reads as raised (in light
+       mode the thumb is white over a light-grey track — same raised effect). */
+    @apply relative inline-flex items-center gap-0.5 rounded-full bg-muted/60 p-0.5
+      dark:bg-background;
+  }
+  /* The sliding selected-state circle (positioned absolutely; the buttons sit above
+     it). Matches a button's footprint and starts inset by the track's padding. */
+  .theme-switch-thumb {
+    @apply pointer-events-none absolute left-0.5 top-0.5 h-7 w-7 rounded-full
+      bg-background shadow-sm dark:bg-border dark:shadow-none;
+  }
+  /* One-shot swipe the selection circle plays as it travels to the new segment. */
+  .theme-thumb-swipe {
+    @apply animate-[thumb-swipe_0.16s_ease-in-out];
   }
   .theme-switch-btn {
-    @apply grid h-7 w-7 place-items-center rounded-md text-muted-foreground
-      transition-colors hover:text-foreground
+    @apply relative z-10 grid h-7 w-7 place-items-center rounded-full text-foreground
+      transition-colors
       focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring;
-  }
-  .theme-switch-btn-active {
-    @apply bg-background text-foreground shadow-sm hover:text-foreground;
   }
 
   /* ---------- chip input (roles) ---------- */
@@ -242,14 +343,20 @@
     @apply flex flex-wrap items-center gap-2;
   }
   .chip {
+    /* Dark: --muted is almost the page/card colour, so the chip blends in — use a
+       slightly lighter grey (L≈22%) so it stands out. */
     @apply inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1.5
-      text-sm font-medium leading-none;
+      text-sm font-medium leading-none dark:bg-[hsl(215_16%_22%)];
   }
   .chip-primary {
     @apply bg-primary/10 text-primary;
   }
-  .chip-remove {
-    @apply inline-flex items-center text-muted-foreground transition-colors hover:text-foreground;
+  /* Pop a newly added chip in; the leave class plays on removal before unmount. */
+  .chip-enter {
+    @apply motion-safe:animate-[chip-in_0.18s_ease-out];
+  }
+  .chip-leave {
+    @apply animate-[chip-out_0.18s_ease-in_forwards];
   }
 
   /* ---------- error alert ---------- */
@@ -286,7 +393,9 @@
   /* A white "sheet of paper" whose skeleton lines shimmer in the brand
      color instead of neutral gray — used on the resume-analyzing screen. */
   .analyzing-doc {
-    @apply mx-auto w-full max-w-xs rounded-xl bg-white p-7 shadow-xl ring-1 ring-black/5;
+    /* No ring/border; a centered (0-offset) soft shadow so the glow is even on
+       all four edges, matching the card treatment. */
+    @apply mx-auto w-full max-w-xs rounded-xl bg-white p-7 shadow-[0_0_30px_rgba(0,0,0,0.12)];
   }
   .skeleton-primary {
     @apply relative overflow-hidden rounded;
@@ -306,20 +415,4 @@
     animation: shimmer 1.5s infinite;
   }
 
-  /* Text shimmer in its own color — a brighter band of the foreground color sweeps
-     across a dimmed version of it (no accent hue). */
-  .text-shimmer {
-    background: linear-gradient(
-      110deg,
-      hsl(var(--foreground) / 0.5) 40%,
-      hsl(var(--foreground)) 50%,
-      hsl(var(--foreground) / 0.5) 60%
-    );
-    background-size: 200% 100%;
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
-    color: transparent;
-    animation: text-shimmer 2.5s linear infinite;
-  }
 }

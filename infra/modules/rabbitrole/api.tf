@@ -64,8 +64,8 @@ data "aws_iam_policy_document" "lambda_runtime" {
     ]
   }
   statement {
-    sid       = "Resumes"
-    effect    = "Allow"
+    sid    = "Resumes"
+    effect = "Allow"
     # Put = upload, Get = view/download, Delete = prune superseded files on
     # re-upload and erase files on account deletion.
     actions   = ["s3:PutObject", "s3:GetObject", "s3:DeleteObject"]

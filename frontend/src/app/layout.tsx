@@ -3,9 +3,10 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import { Navbar } from "@/components/layout/Navbar";
+import { Footer } from "@/components/layout/Footer";
 
 export const metadata: Metadata = {
-  title: "rabbitrole — AI resume reviewer & job matcher",
+  title: "rabbitrole",
   description:
     "Upload your resume, pick a role, and get AI feedback with critical/warning/optional tags plus matched jobs.",
 };
@@ -22,6 +23,7 @@ export default function RootLayout({
         <ThemeProvider>
           <Navbar />
           <main>{children}</main>
+          <Footer />
         </ThemeProvider>
       </body>
     </html>

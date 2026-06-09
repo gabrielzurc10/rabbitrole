@@ -10,7 +10,7 @@ import type {
   Severity,
   Tag,
 } from "@/types";
-import { getAccessToken } from "@/lib/auth";
+import { getValidAccessToken } from "@/lib/auth";
 import { setOnboarded, PROFILE_CACHE_KEY, JOBS_CACHE_KEY, RESUME_CACHE_KEY } from "@/lib/session";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
@@ -41,8 +41,10 @@ export class ApiError extends Error {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  // Attach the Cognito bearer token when signed in (omitted in local demo mode).
-  const token = getAccessToken();
+  // Attach the Cognito bearer token when signed in (omitted in local demo mode). This
+  // silently refreshes the access token first if it has expired but the session is still
+  // alive (valid refresh token), so a long-idle user stays signed in.
+  const token = await getValidAccessToken();
   const headers = new Headers(init?.headers);
   if (token) headers.set("Authorization", `Bearer ${token}`);
 
@@ -96,7 +98,7 @@ export async function getResume(id: string): Promise<ResumeUpload> {
  * bearer token. The caller turns it into an object URL.
  */
 export async function getResumeBlob(id: string): Promise<Blob> {
-  const token = getAccessToken();
+  const token = await getValidAccessToken();
   const headers = new Headers();
   if (token) headers.set("Authorization", `Bearer ${token}`);
 
@@ -141,7 +143,16 @@ export async function getJobs(role: string, resumeId?: string): Promise<Job[]> {
 // writes below invalidate it. `undefined` = not loaded yet; `null` = loaded but
 // the user has no profile/jobs (not onboarded).
 let profileCache: Profile | null | undefined;
-let jobsCache: Job[] | null | undefined;
+
+/** The accumulated paginated jobs view, cached so a tab switch restores it. */
+export interface JobsPage {
+  jobs: Job[];
+  /** Next backend page to request (0-based). */
+  nextPage: number;
+  /** True once a page came back empty — nothing more to load. */
+  done: boolean;
+}
+let jobsCache: JobsPage | null | undefined;
 
 // The profile is small + serializable, so unlike the jobs cache it's also mirrored
 // to sessionStorage (PROFILE_CACHE_KEY). That keeps the just-saved profile across a
@@ -168,23 +179,33 @@ function setProfileCache(value: Profile | null | undefined): void {
 }
 
 // Jobs cache — same sessionStorage-backed scheme as the profile, so a tab switch
-// (even one that reloads the page) shows the saved jobs instead of re-querying.
-function readStoredJobs(): Job[] | null | undefined {
+// (even one that reloads the page) restores the loaded pages instead of re-querying.
+function readStoredJobs(): JobsPage | null | undefined {
   if (typeof window === "undefined") return undefined;
   const raw = window.sessionStorage.getItem(JOBS_CACHE_KEY);
   if (raw === null) return undefined;
   try {
-    return JSON.parse(raw) as Job[] | null;
+    const parsed = JSON.parse(raw);
+    // Only accept the current shape; ignore a stale/old-format cache (re-fetch instead).
+    if (parsed && Array.isArray(parsed.jobs) && typeof parsed.nextPage === "number") {
+      return parsed as JobsPage;
+    }
+    return undefined;
   } catch {
     return undefined;
   }
 }
 
-function setJobsCache(value: Job[] | null | undefined): void {
+function setJobsCache(value: JobsPage | null | undefined): void {
   jobsCache = value;
   if (typeof window === "undefined") return;
   if (value === undefined) window.sessionStorage.removeItem(JOBS_CACHE_KEY);
   else window.sessionStorage.setItem(JOBS_CACHE_KEY, JSON.stringify(value));
+}
+
+/** Persist the accumulated paginated jobs view (called by the Jobs page after loads). */
+export function cacheJobs(value: JobsPage | null): void {
+  setJobsCache(value);
 }
 
 /** Synchronous peek so a page can seed its initial state without a loading flash. */
@@ -192,7 +213,7 @@ export function peekProfile(): Profile | null | undefined {
   if (profileCache === undefined) profileCache = readStoredProfile();
   return profileCache;
 }
-export function peekJobs(): Job[] | null | undefined {
+export function peekJobs(): JobsPage | null | undefined {
   if (jobsCache === undefined) jobsCache = readStoredJobs();
   return jobsCache;
 }
@@ -291,19 +312,15 @@ export async function saveProfile(profile: Profile): Promise<Profile> {
 }
 
 /**
- * Jobs matched to the signed-in user's saved preferences + resume, or null if
- * they haven't onboarded yet. The backend answers 204 No Content (not a 404) for
- * the "no profile" case so the browser doesn't log a console error — request()
- * maps 204 to undefined.
+ * One page (10) of jobs matched to the signed-in user's saved preferences + resume,
+ * in JSearch order with a match % each. `null` when they haven't onboarded yet (the
+ * backend answers 204, mapped to undefined); an empty array means "no more pages."
+ * Caching of the accumulated view is handled by the Jobs page via {@link cacheJobs}.
  */
-export async function getJobsForMe(): Promise<Job[] | null> {
-  if (jobsCache === undefined) jobsCache = readStoredJobs(); // survive a reload
-  if (jobsCache !== undefined) return jobsCache; // cached from this session
-  const jobs = await request<Job[] | undefined>("/api/jobs/me");
+export async function getJobsForMe(page = 0): Promise<Job[] | null> {
+  const jobs = await request<Job[] | undefined>(`/api/jobs/me?page=${page}`);
   setOnboarded(!!jobs);
-  const value = jobs ?? null;
-  setJobsCache(value);
-  return value;
+  return jobs ?? null;
 }
 
 /**

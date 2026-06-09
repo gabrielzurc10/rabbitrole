@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Card, CardBody, CardTitle, CardSubtitle } from "@/components/ui/card";
@@ -10,9 +10,17 @@ import { ScoreSummary } from "@/components/ScoreSummary";
 import { TagList } from "@/components/TagList";
 import { ResumeCard } from "@/components/ResumeCard";
 import { ResumeUploader } from "@/components/ResumeUploader";
+import { RoleEditorCard } from "@/components/RoleEditorCard";
+import { AnalyzingDoc } from "@/components/AnalyzingDoc";
 import { ResumeReviewSkeleton, ReviewBodySkeleton } from "@/components/Skeleton";
 import { getAnalysis, getProfile, peekProfile, ApiError } from "@/lib/api";
 import { setOnboardingDraft, takeAnalyzeError } from "@/lib/onboardingDraft";
+import {
+  getAnalysisStatus,
+  getServerAnalysisStatus,
+  resetAnalysisStatus,
+  subscribeAnalysisStatus,
+} from "@/lib/analysisStatus";
 import { useRequireAuth } from "@/lib/useRequireAuth";
 import type { Analysis, Profile } from "@/types";
 
@@ -44,6 +52,27 @@ function ResumeResult() {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- one-shot mount read
     if (message) setAnalyzeError(message);
   }, []);
+
+  // A background analysis (started from /analyzing) can run while the user is on
+  // this page. Reflect it live: the running animation, then a self-refresh.
+  const analysisStatus = useSyncExternalStore(
+    subscribeAnalysisStatus,
+    getAnalysisStatus,
+    getServerAnalysisStatus,
+  );
+  const analyzing = analysisStatus.phase === "running";
+
+  // When it finishes, saveProfile has already refreshed the cached profile — pull
+  // the new analysisId from it so the load effect below fetches the fresh review.
+  useEffect(() => {
+    if (analysisStatus.phase !== "done") return;
+    const fresh = peekProfile();
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reacting to store completion
+    if (fresh) setProfile(fresh);
+    setAnalysisUnavailable(false);
+    setAnalyzeError(null);
+    resetAnalysisStatus();
+  }, [analysisStatus]);
 
   const analysisId = params.get("id") ?? profile?.analysisId;
   const resumeId = params.get("resumeId") || profile?.resumeId;
@@ -107,57 +136,78 @@ function ResumeResult() {
   return (
     <div className="page">
       <div className="mx-auto max-w-3xl space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold uppercase tracking-tight">Resume review</h1>
-          {hasAnalysis && role && (
-            <p className="mt-1 text-sm text-muted-foreground">
-              Reviewed for <span className="font-medium text-foreground">{role}</span>
-            </p>
-          )}
-        </div>
+        {/* Header hides while the analyze animation is showing, so the animation stands alone. */}
+        {!analyzing && (
+          <div>
+            <h1 className="text-2xl font-bold uppercase tracking-tight">Resume review</h1>
+            {hasAnalysis && role && (
+              <p className="mt-1 text-sm text-muted-foreground">
+                Reviewed for <span className="font-medium text-foreground">{role}</span>
+              </p>
+            )}
+          </div>
+        )}
 
         {analyzeError && <ErrorAlert message={analyzeError} />}
 
-        {hasAnalysis ? (
-          /* Score ring + filename + View/Download. No analysisId prop → no self-link. */
-          <ResumeCard resumeId={resumeId} score={analysis?.score ?? profile.score ?? 0} role={role} />
+        {analyzing ? (
+          /* A background analysis is running — show it live; this page refreshes
+             itself the moment it finishes (no reload needed). */
+          <div className="flex min-h-[45vh] flex-col items-center justify-center text-center">
+            <AnalyzingDoc />
+            <p className="mt-8 text-lg font-semibold tracking-tight">
+              Analyzing your resume…
+            </p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              This updates automatically when it&rsquo;s ready.
+            </p>
+          </div>
         ) : (
-          <Card>
-            <CardBody className="flex flex-col items-center gap-2 py-10 text-center">
-              <Icon name="file-text" className="h-10 w-10 text-muted-foreground" />
-              <CardTitle>No analysis found</CardTitle>
-              <CardSubtitle>Upload a resume below to start analyzing.</CardSubtitle>
-            </CardBody>
-          </Card>
+          <>
+            {hasAnalysis ? (
+              /* Score ring + filename + View/Download. No analysisId prop → no self-link. */
+              <ResumeCard resumeId={resumeId} score={analysis?.score ?? profile.score ?? 0} role={role} />
+            ) : (
+              <Card>
+                <CardBody className="flex flex-col items-center gap-2 py-10 text-center">
+                  <Icon name="file-text" className="h-10 w-10 text-muted-foreground" />
+                  <CardTitle>No analysis found</CardTitle>
+                  <CardSubtitle>Upload a resume below to start analyzing.</CardSubtitle>
+                </CardBody>
+              </Card>
+            )}
+
+            {hasAnalysis && <RoleEditorCard profile={profile} onSaved={setProfile} />}
+
+            <Card>
+              <CardBody className="space-y-3">
+                <CardTitle>{hasAnalysis ? "Update your resume" : "Upload your resume"}</CardTitle>
+                <CardSubtitle>
+                  {hasAnalysis
+                    ? "Upload a new version to start analyzing."
+                    : "Upload a resume to start analyzing."}
+                </CardSubtitle>
+                <ResumeUploader onFile={reAnalyze} />
+              </CardBody>
+            </Card>
+
+            {hasAnalysis &&
+              (analysis ? (
+                <>
+                  <ScoreSummary counts={analysis.counts} />
+                  <div>
+                    <h2 className="mb-4 text-lg font-semibold tracking-tight">Suggested improvements</h2>
+                    <p className="mb-4 text-sm text-muted-foreground">
+                      Click any tag to see why it matters and a suggested replacement.
+                    </p>
+                    <TagList tags={analysis.tags} />
+                  </div>
+                </>
+              ) : (
+                <ReviewBodySkeleton />
+              ))}
+          </>
         )}
-
-        <Card>
-          <CardBody className="space-y-3">
-            <CardTitle>{hasAnalysis ? "Update your resume" : "Upload your resume"}</CardTitle>
-            <CardSubtitle>
-              {hasAnalysis
-                ? "Upload a new version to re-score it."
-                : "Upload a resume to start analyzing."}
-            </CardSubtitle>
-            <ResumeUploader onFile={reAnalyze} />
-          </CardBody>
-        </Card>
-
-        {hasAnalysis &&
-          (analysis ? (
-            <>
-              <ScoreSummary counts={analysis.counts} />
-              <div>
-                <h2 className="mb-4 text-lg font-semibold tracking-tight">Suggested improvements</h2>
-                <p className="mb-4 text-sm text-muted-foreground">
-                  Click any tag to see why it matters and a suggested replacement.
-                </p>
-                <TagList tags={analysis.tags} />
-              </div>
-            </>
-          ) : (
-            <ReviewBodySkeleton />
-          ))}
       </div>
     </div>
   );

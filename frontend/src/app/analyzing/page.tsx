@@ -1,9 +1,16 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
-import { analyzeResume, saveProfile, uploadResume } from "@/lib/api";
-import { clearOnboardingDraft, getOnboardingDraft, flagAnalyzeError } from "@/lib/onboardingDraft";
+import { AnalyzingDoc } from "@/components/AnalyzingDoc";
+import { getOnboardingDraft } from "@/lib/onboardingDraft";
+import {
+  getAnalysisStatus,
+  getServerAnalysisStatus,
+  resetAnalysisStatus,
+  startAnalysis,
+  subscribeAnalysisStatus,
+} from "@/lib/analysisStatus";
 import { useRequireAuth } from "@/lib/useRequireAuth";
 
 /**
@@ -19,6 +26,11 @@ export default function AnalyzingPage() {
   const router = useRouter();
   const ready = useRequireAuth();
   const started = useRef(false);
+  const status = useSyncExternalStore(
+    subscribeAnalysisStatus,
+    getAnalysisStatus,
+    getServerAnalysisStatus,
+  );
 
   // Leave this transient page without trapping the user: continue their backward
   // navigation (skipping the stale /analyzing entry), or fall back for a direct load.
@@ -27,6 +39,8 @@ export default function AnalyzingPage() {
     else router.replace("/profile/");
   }, [router]);
 
+  // Kick off the pipeline once auth is ready. It runs in the analysisStatus store,
+  // not here, so it keeps going if the user navigates away mid-analysis.
   useEffect(() => {
     if (!ready) return; // wait until the auth guard confirms a live session
     if (started.current) return; // guard against StrictMode double-invoke
@@ -37,31 +51,25 @@ export default function AnalyzingPage() {
       leave(); // nothing to do here — step off
       return;
     }
+    startAnalysis(draft);
+  }, [ready, leave]);
 
-    (async () => {
-      try {
-        const uploaded = await uploadResume(draft.file);
-        const primaryRole = draft.profile.targetRoles[0];
-        const analysis = await analyzeResume(uploaded.id, primaryRole);
-        await saveProfile({
-          ...draft.profile,
-          resumeId: uploaded.id,
-          analysisId: analysis.id,
-          score: analysis.score,
-        });
-        clearOnboardingDraft();
-        // Land on the resume review for the analysis we just produced.
-        const review = `/resume/?id=${analysis.id}&resumeId=${uploaded.id}&role=${encodeURIComponent(
-          primaryRole,
-        )}`;
-        router.replace(review);
-      } catch {
-        // Fall back to the page we came from and surface a friendly message there.
-        flagAnalyzeError("Analyzing failed. Please try again.");
-        router.replace(draft.origin ?? "/onboarding/");
-      }
-    })();
-  }, [ready, router, leave]);
+  // React to completion *while this page is still mounted*: go to the fresh review,
+  // or back to the origin on failure. If the user navigated away, this effect is
+  // gone and no redirect fires — the Resume tab/page reflect the result instead.
+  useEffect(() => {
+    if (status.phase === "done") {
+      const review = `/resume/?id=${status.analysisId}&resumeId=${status.resumeId}&role=${encodeURIComponent(
+        status.role,
+      )}`;
+      resetAnalysisStatus();
+      router.replace(review);
+    } else if (status.phase === "error") {
+      const { origin } = status;
+      resetAnalysisStatus();
+      router.replace(origin);
+    }
+  }, [status, router]);
 
   // A bfcache restore (or stale Back) re-runs no effects — re-check on pageshow and
   // step off if there's no longer a pipeline running.
@@ -74,34 +82,13 @@ export default function AnalyzingPage() {
   }, [leave]);
 
   // No active pipeline → show nothing (don't flash the animation on a stray visit).
-  if (getOnboardingDraft() === null) return null;
+  if (getOnboardingDraft() === null && status.phase !== "running") return null;
 
   return (
     <div className="page">
       <div className="mx-auto flex min-h-[55vh] max-w-md flex-col items-center justify-center text-center">
-        {/* A white resume "sheet" filling in: skeleton lines shimmering in
-            the brand color (see .analyzing-doc / .skeleton-primary). Sized tall
-            like a real resume page — a name header + several sections. */}
-        <div className="analyzing-doc">
-          <div className="skeleton-primary h-5 w-3/5" />
-          <div className="skeleton-primary mt-2.5 h-3 w-2/5" />
-          {[
-            ["w-full", "w-11/12", "w-4/5"],
-            ["w-full", "w-5/6", "w-2/3"],
-            ["w-full", "w-11/12", "w-3/4"],
-            ["w-full", "w-4/5", "w-1/2"],
-          ].map((lines, s) => (
-            <div key={s} className="mt-5">
-              <div className="skeleton-primary h-3 w-1/4" />
-              <div className="mt-2.5 space-y-2.5">
-                {lines.map((w, i) => (
-                  <div key={i} className={`skeleton-primary h-2.5 ${w}`} />
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-        <h1 className="text-shimmer mt-8 text-xl font-semibold tracking-tight">
+        <AnalyzingDoc />
+        <h1 className="mt-8 text-xl font-semibold tracking-tight">
           Analyzing your resume…
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">

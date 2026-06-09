@@ -11,27 +11,28 @@ import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-/** Verifies cosine ranking with a stubbed embedding client (no API calls). */
+/** Verifies cosine scoring with a stubbed embedding client (no API calls). */
 class MatchScorerTest {
 
     @Test
-    void ranksMoreSimilarJobHigher() {
+    void scoresByCosineButKeepsInputOrder() {
         EmbeddingClient embeddings = mock(EmbeddingClient.class);
-        // resume, then two jobs: job A aligns with the resume vector, job B is orthogonal.
+        // resume, then two jobs in input order: B is orthogonal (low match), A is identical
+        // (high match). A is listed SECOND on purpose — scoring must not re-rank it first.
         when(embeddings.embedAll(anyList())).thenReturn(List.of(
                 new float[]{1f, 0f},    // resume
-                new float[]{1f, 0f},    // job A — identical direction -> high match
-                new float[]{0f, 1f}));  // job B — orthogonal -> low match
+                new float[]{0f, 1f},    // job B — orthogonal -> low match
+                new float[]{1f, 0f}));  // job A — identical direction -> high match
 
         MatchScorer scorer = new MatchScorer(embeddings);
         List<Job> jobs = List.of(
-                new Job("A", "Match", "Acme", null, "Remote", "", "", "remote", null, "desc", "url", null, null, null, null, null, null, null),
-                new Job("B", "NoMatch", "Beta", null, "Remote", "", "", "remote", null, "desc", "url", null, null, null, null, null, null, null));
+                new Job("B", "NoMatch", "Beta", null, "Remote", "", "", "remote", null, "desc", "url", null, null, null, null, null, null, null),
+                new Job("A", "Match", "Acme", null, "Remote", "", "", "remote", null, "desc", "url", null, null, null, null, null, null, null));
 
-        List<Job> ranked = scorer.score("resume", jobs);
+        List<Job> scored = scorer.score("resume", jobs);
 
-        assertThat(ranked).hasSize(2);
-        assertThat(ranked.get(0).id()).isEqualTo("A");
-        assertThat(ranked.get(0).matchPercent()).isGreaterThan(ranked.get(1).matchPercent());
+        // Input order preserved (not sorted by match %), but each carries its own score.
+        assertThat(scored).extracting(Job::id).containsExactly("B", "A");
+        assertThat(scored.get(1).matchPercent()).isGreaterThan(scored.get(0).matchPercent());
     }
 }

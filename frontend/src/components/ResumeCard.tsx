@@ -121,12 +121,12 @@ export function ResumeCard({
         <div className="flex flex-wrap gap-2">
           {resumeId && (
             <>
-              <Button variant="outline" size="sm" onClick={view} disabled={busy}>
-                <Icon name="file-text" className="h-4 w-4" />
+              <Button variant="outline" size="sm" className="group" onClick={view} disabled={busy}>
+                <Icon name="file-text" className="icon-nudge-up h-4 w-4" />
                 View resume
               </Button>
-              <Button variant="outline" size="sm" onClick={download} disabled={busy}>
-                <Icon name="download" className="h-4 w-4" />
+              <Button variant="outline" size="sm" className="group" onClick={download} disabled={busy}>
+                <Icon name="download" className="icon-nudge-up h-4 w-4" />
                 Download
               </Button>
             </>
@@ -152,8 +152,8 @@ export function ResumeCard({
           />
         )}
         <div className="mt-3 flex justify-end">
-          <Button variant="outline" size="sm" onClick={download} disabled={busy}>
-            <Icon name="download" className="h-4 w-4" />
+          <Button variant="outline" size="sm" className="group" onClick={download} disabled={busy}>
+            <Icon name="download" className="icon-nudge-up h-4 w-4" />
             Download
           </Button>
         </div>

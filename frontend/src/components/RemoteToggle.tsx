@@ -25,7 +25,7 @@ export function RemoteToggle({
       className={cn("segment flex-row px-4 py-2", value && "segment-active")}
     >
       <Icon name="monitor" className="h-5 w-5" />
-      Remote eligible
+      Remote
     </button>
   );
 }

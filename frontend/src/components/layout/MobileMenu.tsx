@@ -63,11 +63,11 @@ export function MobileMenu() {
                 onClick={() => setOpen(false)}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "flex items-center gap-2 rounded-md px-3 py-2 text-sm",
-                  active ? "font-medium text-primary" : "text-foreground hover:bg-muted",
+                  "group flex items-center gap-2 rounded-md px-3 py-2 text-sm",
+                  active ? "font-medium text-primary" : "text-foreground",
                 )}
               >
-                <Icon name={t.icon} className="h-4 w-4" />
+                <Icon name={t.icon} className="icon-nudge-up h-4 w-4" />
                 <span className={cn(active && "underline decoration-2 underline-offset-4")}>
                   {t.label}
                 </span>

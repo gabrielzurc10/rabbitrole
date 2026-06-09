@@ -54,7 +54,7 @@ public class JobController {
     }
 
     @GetMapping("/me")
-    public ResponseEntity<List<Job>> forMe() {
+    public ResponseEntity<List<Job>> forMe(@RequestParam(defaultValue = "0") int page) {
         String userId = currentUser.id();
         // 204 (not 404) when there's no profile yet, so the browser doesn't log a
         // console error for the expected "not onboarded" case — the frontend gates
@@ -67,7 +67,8 @@ public class JobController {
         String resumeText = profile.resumeId() == null
                 ? null
                 : resumes.extractedText(profile.resumeId(), userId);
-        return ResponseEntity.ok(jobs.forProfile(profile, resumeText));
+        // page is 0-based; an out-of-range page just yields an empty list ("no more").
+        return ResponseEntity.ok(jobs.forProfile(profile, resumeText, Math.max(0, page)));
     }
 
     /**

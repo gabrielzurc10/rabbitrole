@@ -13,7 +13,11 @@ export function Stepper({ steps, current }: { steps: string[]; current: number }
         return (
           <Fragment key={label}>
             {i > 0 && (
-              <span className={cn("stepper-connector", n <= current && "stepper-connector-done")} />
+              <span className="stepper-connector">
+                <span
+                  className={cn("stepper-connector-fill", n <= current && "stepper-connector-fill-done")}
+                />
+              </span>
             )}
             <span
               className={cn(

@@ -24,6 +24,12 @@ resource "aws_cognito_user_pool" "main" {
     }
   }
 
+  # One account per email: link a Google sign-up to an existing native user instead of
+  # creating a duplicate (handler in auth_linking.tf / lambdas/cognito-link).
+  lambda_config {
+    pre_sign_up = aws_lambda_function.cognito_link.arn
+  }
+
   tags = local.tags
 }
 

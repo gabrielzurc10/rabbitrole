@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { Card, CardBody, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Icon } from "@/components/ui/icon";
+import { AutoHeight } from "@/components/AutoHeight";
 import { PreferenceFields } from "@/components/PreferenceFields";
 import type { CityPreference, EmploymentType, Profile } from "@/types";
 
@@ -66,23 +68,34 @@ export function JobFilterPanel({
 
   return (
     <Card>
-      <CardBody className="space-y-5">
-        <CardTitle>Filter matches</CardTitle>
+      <CardBody>
+        {/* AutoHeight animates the card's height as the fields change size — e.g. the
+            Locations field appearing when Remote is toggled off, or chips added/removed. */}
+        <AutoHeight>
+          <div className="space-y-5">
+            <CardTitle>Filter matches</CardTitle>
 
-        <PreferenceFields
-          roles={roles}
-          onRolesChange={setRoles}
-          remote={remote}
-          onRemoteChange={setRemote}
-          cities={cities}
-          onCitiesChange={setCities}
-          employmentTypes={employmentTypes}
-          onEmploymentTypesChange={setEmploymentTypes}
-        />
+            <PreferenceFields
+              roles={roles}
+              onRolesChange={setRoles}
+              remote={remote}
+              onRemoteChange={setRemote}
+              cities={cities}
+              onCitiesChange={setCities}
+              employmentTypes={employmentTypes}
+              onEmploymentTypesChange={setEmploymentTypes}
+            />
 
-        <Button onClick={() => onApply({ ...profile, ...next })} disabled={!canApply}>
-          {applying ? "Applying…" : "Apply filters"}
-        </Button>
+            <Button
+              onClick={() => onApply({ ...profile, ...next })}
+              disabled={!canApply}
+              className="group hover:opacity-100"
+            >
+              <Icon name="check" className="icon-nudge-up h-4 w-4" />
+              {applying ? "Applying…" : "Apply filters"}
+            </Button>
+          </div>
+        </AutoHeight>
       </CardBody>
     </Card>
   );

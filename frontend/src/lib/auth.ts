@@ -18,9 +18,17 @@ const CIP_ENDPOINT = `https://cognito-idp.${REGION}.amazonaws.com/`;
 
 const ACCESS_TOKEN_KEY = "rr.accessToken";
 const ID_TOKEN_KEY = "rr.idToken"; // kept only to read the email claim for display
+const REFRESH_TOKEN_KEY = "rr.refreshToken"; // exchanged for fresh access tokens (silent refresh)
+const REFRESH_EXPIRES_AT_KEY = "rr.refreshExpiresAt";
+const AUTH_METHOD_KEY = "rr.authMethod"; // "oauth" | "email" — which refresh flow to use
 const EXPIRES_AT_KEY = "rr.expiresAt";
 const VERIFIER_KEY = "rr.pkceVerifier";
 const OTP_SESSION_KEY = "rr.otpSession";
+
+// Cognito's default refresh-token lifetime (30 days). We don't get its exact expiry
+// back, so we estimate it to gate isAuthenticated()/refresh attempts; a revoked/expired
+// token is caught for real when a refresh call fails.
+const REFRESH_TOKEN_DAYS = 30;
 // Demo mode has no real token, so "signed out" is tracked with this flag instead
 // (per-tab). Lets sign-out actually lock the app locally, like the deployed app.
 const DEMO_LOGOUT_KEY = "rr.demoLoggedOut";
@@ -134,11 +142,11 @@ export async function handleRedirectCallback(): Promise<boolean> {
   const token = (await res.json()) as {
     access_token: string;
     id_token?: string;
+    refresh_token?: string;
     expires_in: number;
   };
-  localStorage.setItem(ACCESS_TOKEN_KEY, token.access_token);
-  if (token.id_token) localStorage.setItem(ID_TOKEN_KEY, token.id_token);
-  localStorage.setItem(EXPIRES_AT_KEY, String(Date.now() + token.expires_in * 1000));
+  storeSession(token.access_token, token.id_token, token.expires_in);
+  if (token.refresh_token) storeRefreshToken(token.refresh_token, "oauth");
 
   // Drop the ?code= from the URL so a refresh doesn't re-exchange it.
   window.history.replaceState({}, "", window.location.pathname);
@@ -211,23 +219,121 @@ export async function verifyEmailCode(email: string, code: string): Promise<void
   }
 
   const result = data.AuthenticationResult as
-    | { AccessToken?: string; IdToken?: string; ExpiresIn?: number }
+    | { AccessToken?: string; IdToken?: string; RefreshToken?: string; ExpiresIn?: number }
     | undefined;
   if (!result?.AccessToken) throw new Error("Sign-in failed. Please try again.");
 
   sessionStorage.removeItem(OTP_SESSION_KEY);
-  localStorage.setItem(ACCESS_TOKEN_KEY, result.AccessToken);
-  if (result.IdToken) localStorage.setItem(ID_TOKEN_KEY, result.IdToken);
-  localStorage.setItem(EXPIRES_AT_KEY, String(Date.now() + (result.ExpiresIn ?? 3600) * 1000));
+  storeSession(result.AccessToken, result.IdToken, result.ExpiresIn);
+  if (result.RefreshToken) storeRefreshToken(result.RefreshToken, "email");
 }
 
-/** Bearer token for API calls, or null when unauthenticated / in demo mode. */
+/** Store a fresh access + id token and its expiry. */
+function storeSession(accessToken: string, idToken: string | undefined, expiresInSec?: number): void {
+  localStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
+  if (idToken) localStorage.setItem(ID_TOKEN_KEY, idToken);
+  localStorage.setItem(EXPIRES_AT_KEY, String(Date.now() + (expiresInSec ?? 3600) * 1000));
+}
+
+/** Store the long-lived refresh token + which flow issued it (so we refresh the right way). */
+function storeRefreshToken(refreshToken: string, method: "oauth" | "email"): void {
+  localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+  localStorage.setItem(REFRESH_EXPIRES_AT_KEY, String(Date.now() + REFRESH_TOKEN_DAYS * 86_400_000));
+  localStorage.setItem(AUTH_METHOD_KEY, method);
+}
+
+function clearTokens(): void {
+  if (typeof window === "undefined") return;
+  for (const key of [
+    ACCESS_TOKEN_KEY,
+    ID_TOKEN_KEY,
+    REFRESH_TOKEN_KEY,
+    REFRESH_EXPIRES_AT_KEY,
+    AUTH_METHOD_KEY,
+    EXPIRES_AT_KEY,
+  ]) {
+    localStorage.removeItem(key);
+  }
+}
+
+/** Bearer token for API calls, or null when expired / unauthenticated / in demo mode. */
 export function getAccessToken(): string | null {
   if (!isConfigured) return null;
   const token = localStorage.getItem(ACCESS_TOKEN_KEY);
   const expiresAt = Number(localStorage.getItem(EXPIRES_AT_KEY) ?? 0);
   if (!token || Date.now() >= expiresAt) return null;
   return token;
+}
+
+/** A refresh token we estimate is still usable (the real check is the refresh call). */
+function hasValidRefreshToken(): boolean {
+  if (typeof window === "undefined") return false;
+  const token = localStorage.getItem(REFRESH_TOKEN_KEY);
+  const expiresAt = Number(localStorage.getItem(REFRESH_EXPIRES_AT_KEY) ?? 0);
+  return Boolean(token) && Date.now() < expiresAt;
+}
+
+// Dedupe concurrent refreshes (many API calls can race when the access token expires).
+let refreshing: Promise<boolean> | null = null;
+
+/**
+ * Exchange the refresh token for a new access token, via the same flow that issued it
+ * (OAuth /token for Google sign-ins, Cognito REFRESH_TOKEN_AUTH for email-OTP). Returns
+ * false (and clears the session) if the token is revoked/expired.
+ */
+function refresh(): Promise<boolean> {
+  if (refreshing) return refreshing;
+  refreshing = (async () => {
+    const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
+    if (!refreshToken) return false;
+    try {
+      if (localStorage.getItem(AUTH_METHOD_KEY) === "email") {
+        const data = await cipCall("InitiateAuth", {
+          AuthFlow: "REFRESH_TOKEN_AUTH",
+          ClientId: CLIENT_ID,
+          AuthParameters: { REFRESH_TOKEN: refreshToken },
+        });
+        const r = data.AuthenticationResult as
+          | { AccessToken?: string; IdToken?: string; ExpiresIn?: number }
+          | undefined;
+        if (!r?.AccessToken) throw new Error("no token");
+        storeSession(r.AccessToken, r.IdToken, r.ExpiresIn);
+      } else {
+        const res = await fetch(`https://${DOMAIN}/oauth2/token`, {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: new URLSearchParams({
+            grant_type: "refresh_token",
+            client_id: CLIENT_ID,
+            refresh_token: refreshToken,
+          }),
+        });
+        if (!res.ok) throw new Error("refresh failed");
+        const t = (await res.json()) as { access_token: string; id_token?: string; expires_in: number };
+        storeSession(t.access_token, t.id_token, t.expires_in);
+      }
+      return true;
+    } catch {
+      clearTokens(); // refresh token no longer valid — fall back to signed-out
+      return false;
+    }
+  })().finally(() => {
+    refreshing = null;
+  });
+  return refreshing;
+}
+
+/**
+ * The bearer token for an API call, refreshing it silently first if it's expired but the
+ * refresh token is still good. Null when there's no way to authenticate (demo mode, or
+ * both tokens gone). This is what api.ts should use to attach the bearer.
+ */
+export async function getValidAccessToken(): Promise<string | null> {
+  if (!isConfigured) return null; // demo mode: no bearer (backend permits all locally)
+  const token = getAccessToken();
+  if (token) return token;
+  if (!hasValidRefreshToken()) return null;
+  return (await refresh()) ? getAccessToken() : null;
 }
 
 /**
@@ -248,12 +354,16 @@ export function getEmail(): string | null {
   }
 }
 
-/** Demo mode is "signed in" unless explicitly signed out; otherwise gate on a live token. */
+/**
+ * Demo mode is "signed in" unless explicitly signed out; otherwise the session is live
+ * when there's a valid access token OR a refresh token we can swap for one — so an
+ * expired access token (after ~1h, or returning after a day) doesn't read as signed out.
+ */
 export function isAuthenticated(): boolean {
   if (!isConfigured) {
     return typeof window === "undefined" || sessionStorage.getItem(DEMO_LOGOUT_KEY) === null;
   }
-  return getAccessToken() !== null;
+  return getAccessToken() !== null || hasValidRefreshToken();
 }
 
 /** Clears the demo "signed out" flag — called when the user signs in again locally. */
@@ -263,9 +373,7 @@ export function clearDemoSession(): void {
 
 /** Sign out: clear tokens and (when configured) end the Hosted UI session. */
 export function logout(): void {
-  localStorage.removeItem(ACCESS_TOKEN_KEY);
-  localStorage.removeItem(ID_TOKEN_KEY);
-  localStorage.removeItem(EXPIRES_AT_KEY);
+  clearTokens(); // access + id + refresh tokens and their expiries
   // The theme is a per-signed-in-user preference: reset to system on sign out so the
   // signed-out app (landing/login) always uses the system theme. ("theme" is
   // next-themes' default storage key; clearing it falls back to defaultTheme="system".)

@@ -6,12 +6,13 @@ import com.rabbitrole.jobs.dto.Job;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 
 /**
- * Scores how well a resume matches each posting via embedding cosine similarity,
- * then maps the raw score to a friendlier 0–100 percentage and ranks by it.
+ * Scores how well a resume matches each posting via embedding cosine similarity and
+ * maps it to a friendlier 0–100 percentage. Postings keep their input (JSearch/merge)
+ * order — the % is shown as a badge, not used to re-rank — so paginated batches stay
+ * in a stable, job-board-like order.
  */
 @Component
 public class MatchScorer {
@@ -22,7 +23,7 @@ public class MatchScorer {
         this.embeddings = embeddings;
     }
 
-    /** Returns the jobs with match percentages set, highest match first. */
+    /** Returns the jobs with match percentages set, in their original order. */
     public List<Job> score(String resumeText, List<Job> jobs) {
         if (jobs.isEmpty()) {
             return jobs;
@@ -42,16 +43,17 @@ public class MatchScorer {
             scored.add(jobs.get(i).withMatch(toPercent(cosine)));
         }
 
-        scored.sort(Comparator.comparing(Job::matchPercent).reversed());
         return scored;
     }
 
     /**
-     * Resume/job cosine scores realistically land in roughly 0.3–0.6, so we
-     * rescale that band to 0–100 to give the UI a meaningful spread.
+     * Resume/job cosine scores realistically land in roughly 0.3–0.6 (a resume and a
+     * job posting are different document types, so even a great fit isn't near-identical
+     * text). Map that band to 0–100 — i.e. 0.3 → 0%, 0.6 → 100% — so the bar uses its full
+     * range instead of compressing everything into the low end.
      */
     private int toPercent(double cosine) {
-        double scaled = (cosine - 0.3) / 0.5;
+        double scaled = (cosine - 0.3) / 0.3;
         int pct = (int) Math.round(Math.max(0, Math.min(1, scaled)) * 100);
         return pct;
     }

@@ -7,6 +7,7 @@ import { Icon } from "@/components/ui/icon";
 import { cn } from "@/lib/cn";
 import { isAuthenticated } from "@/lib/auth";
 import { isOnboarded, subscribeOnboarded } from "@/lib/session";
+import { isAnalyzing, subscribeAnalysisStatus } from "@/lib/analysisStatus";
 
 /**
  * The Jobs/Resume/Profile tabs. Shown once the user is signed in AND onboarded (the
@@ -23,6 +24,9 @@ export function NavTabs() {
     () => isAuthenticated() && isOnboarded(),
     () => false,
   );
+  // A background analysis (started from /analyzing) puts a spinner on the Resume
+  // tab so the user can tell it's still working after they navigate away.
+  const analyzing = useSyncExternalStore(subscribeAnalysisStatus, isAnalyzing, () => false);
   const onJobs = pathname.startsWith("/jobs");
   const onResume = pathname.startsWith("/resume");
   const onProfile = pathname.startsWith("/profile");
@@ -34,11 +38,11 @@ export function NavTabs() {
         href="/jobs/"
         aria-current={onJobs ? "page" : undefined}
         className={cn(
-          "btn btn-sm relative",
-          onJobs ? "text-primary font-medium" : "text-foreground hover:bg-muted",
+          "btn btn-sm group relative",
+          onJobs ? "text-primary font-medium" : "text-foreground",
         )}
       >
-        <Icon name="briefcase" className="h-4 w-4" />
+        <Icon name="briefcase" className="icon-nudge-up h-4 w-4" />
         <span className="relative">
           Jobs
           {onJobs && (
@@ -50,11 +54,15 @@ export function NavTabs() {
         href="/resume/"
         aria-current={onResume ? "page" : undefined}
         className={cn(
-          "btn btn-sm relative",
-          onResume ? "text-primary font-medium" : "text-foreground hover:bg-muted",
+          "btn btn-sm group relative",
+          onResume ? "text-primary font-medium" : "text-foreground",
         )}
       >
-        <Icon name="file-text" className="h-4 w-4" />
+        {analyzing ? (
+          <span className="nav-spinner motion-safe:animate-spin" role="status" aria-label="Analyzing your resume" />
+        ) : (
+          <Icon name="file-text" className="icon-nudge-up h-4 w-4" />
+        )}
         <span className="relative">
           Resume
           {onResume && (
@@ -66,11 +74,11 @@ export function NavTabs() {
         href="/profile/"
         aria-current={onProfile ? "page" : undefined}
         className={cn(
-          "btn btn-sm relative",
-          onProfile ? "text-primary font-medium" : "text-foreground hover:bg-muted",
+          "btn btn-sm group relative",
+          onProfile ? "text-primary font-medium" : "text-foreground",
         )}
       >
-        <Icon name="user" className="h-4 w-4" />
+        <Icon name="user" className="icon-nudge-up h-4 w-4" />
         <span className="relative">
           Profile
           {onProfile && (

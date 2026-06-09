@@ -43,9 +43,9 @@ public class JSearchClient {
                 .build();
     }
 
-    /** Searches postings for a role (no location/type filter); scores filled in later. */
+    /** Searches the first page of postings for a role (no location/type filter). */
     public List<Job> search(String role) {
-        return search(role, null, false, List.of());
+        return search(role, null, false, List.of(), 1);
     }
 
     /**
@@ -53,11 +53,13 @@ public class JSearchClient {
      * {@code where} is a "City, State" string folded into the free-text query
      * (JSearch has no radius parameter, so proximity is city/metro-level).
      * {@code employmentTypes} maps to JSearch's native {@code job_employment_types}
-     * request filter; empty means "any type".
+     * request filter; empty means "any type". {@code page} is JSearch's 1-based page
+     * (10 results per page), so callers paginate by bumping it.
      */
     @SuppressWarnings("unchecked")
-    public List<Job> search(String role, String where, boolean remoteOnly, List<EmploymentType> employmentTypes) {
-        Map<String, Object> response = fetchWithRetry(role, where, remoteOnly, employmentTypes);
+    public List<Job> search(String role, String where, boolean remoteOnly,
+                            List<EmploymentType> employmentTypes, int page) {
+        Map<String, Object> response = fetchWithRetry(role, where, remoteOnly, employmentTypes, page);
         if (response == null || response.get("data") == null) {
             return List.of();
         }
@@ -66,7 +68,7 @@ public class JSearchClient {
     }
 
     private Map<String, Object> fetchWithRetry(String role, String where, boolean remoteOnly,
-                                               List<EmploymentType> employmentTypes) {
+                                               List<EmploymentType> employmentTypes, int page) {
         String query = (where == null || where.isBlank()) ? role : role + " in " + where;
         // JSearch's native type filter: comma-separated enum values (e.g. "CONTRACTOR,PARTTIME").
         // Null when none picked so the param is omitted entirely ("any type"). NOTE: the
@@ -82,7 +84,7 @@ public class JSearchClient {
                         .uri(uriBuilder -> {
                             uriBuilder.path("/search")
                                     .queryParam("query", query)
-                                    .queryParam("page", 1)
+                                    .queryParam("page", page)
                                     .queryParam("num_pages", 1)
                                     .queryParam("country", country)
                                     .queryParam("date_posted", "all")

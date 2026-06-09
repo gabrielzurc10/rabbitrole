@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
+import { cn } from "@/lib/cn";
 import { titleCase } from "@/lib/text";
 import type { CityPreference } from "@/types";
 
@@ -20,6 +21,18 @@ export function CityProximityEditor({
 }) {
   const [city, setCity] = useState("");
   const [state, setState] = useState("");
+  // Cities mid-exit-animation, keyed "city|state"; kept rendered until the leave ends.
+  const [leaving, setLeaving] = useState<string[]>([]);
+  const keyOf = (c: CityPreference) => `${c.city}|${c.state}`;
+
+  function remove(c: CityPreference) {
+    const drop = () => onChange(value.filter((p) => keyOf(p) !== keyOf(c)));
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      drop();
+      return;
+    }
+    setLeaving((l) => [...l, keyOf(c)]);
+  }
 
   function add() {
     const c = titleCase(city.trim());
@@ -59,8 +72,8 @@ export function CityProximityEditor({
             }
           }}
         />
-        <Button type="button" variant="outline" onClick={add}>
-          <Icon name="plus" className="h-4 w-4" />
+        <Button type="button" variant="outline" className="group" onClick={add}>
+          <Icon name="plus" className="icon-nudge-up h-4 w-4" />
           Add
         </Button>
       </div>
@@ -71,19 +84,34 @@ export function CityProximityEditor({
         </p>
       ) : (
         <div className="chip-input mt-3">
-          {value.map((c, i) => (
-            <span key={`${c.city}-${c.state}-${i}`} className="chip">
-              {c.city}, {c.state}
-              <button
-                type="button"
-                className="chip-remove"
-                onClick={() => onChange(value.filter((_, idx) => idx !== i))}
-                aria-label={`Remove ${c.city}, ${c.state}`}
+          {value.map((c) => {
+            const isLeaving = leaving.includes(keyOf(c));
+            return (
+              <div
+                key={keyOf(c)}
+                className={cn(
+                  "chip chip-enter relative transition-transform duration-150 hover:z-10 hover:scale-110 motion-reduce:transform-none",
+                  isLeaving && "chip-leave",
+                )}
+                onAnimationEnd={() => {
+                  if (!isLeaving) return;
+                  setLeaving((l) => l.filter((k) => k !== keyOf(c)));
+                  onChange(value.filter((p) => keyOf(p) !== keyOf(c)));
+                }}
               >
-                <Icon name="x" className="h-3.5 w-3.5" />
-              </button>
-            </span>
-          ))}
+                {c.city}, {c.state}
+                {/* The x is the only thing that removes the location. */}
+                <button
+                  type="button"
+                  className="inline-flex text-muted-foreground transition-colors hover:text-foreground"
+                  onClick={() => remove(c)}
+                  aria-label={`Remove ${c.city}, ${c.state}`}
+                >
+                  <Icon name="x" className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

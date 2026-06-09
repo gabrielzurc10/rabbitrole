@@ -12,6 +12,7 @@ import { RemoteToggle } from "@/components/RemoteToggle";
 import { EmploymentTypeSelector, EMPLOYMENT_LABELS } from "@/components/EmploymentTypeSelector";
 import { CityProximityEditor } from "@/components/CityProximityEditor";
 import { Stepper } from "@/components/Stepper";
+import { AutoHeight } from "@/components/AutoHeight";
 import { peekProfile } from "@/lib/api";
 import { titleCase } from "@/lib/text";
 import { setOnboardingDraft, takeAnalyzeError } from "@/lib/onboardingDraft";
@@ -89,7 +90,7 @@ export default function OnboardingPage() {
 
   return (
     <div className="page">
-      <div className="mx-auto max-w-2xl">
+      <div className="mx-auto max-w-2xl motion-safe:animate-[slide-up_0.4s_ease-out_both]">
         <h1 className="text-2xl font-bold uppercase tracking-tight">Set up your profile</h1>
         <p className="mt-1 text-muted-foreground">
           A few quick steps so we can tailor your review and job matches.
@@ -106,7 +107,8 @@ export default function OnboardingPage() {
         </div>
 
         <Card className="mt-6">
-          <CardBody className="space-y-5">
+          <CardBody>
+            <AutoHeight>
             {step === 1 && (
               <div>
                 <label htmlFor="fullName" className="label">
@@ -169,27 +171,28 @@ export default function OnboardingPage() {
                 cities={needsCities ? cities : []}
               />
             )}
+            </AutoHeight>
           </CardBody>
         </Card>
 
         <div className="mt-4 flex items-center justify-between">
           <Button
             variant="ghost"
-            className="text-muted-foreground hover:bg-transparent hover:text-foreground"
+            className="group text-foreground hover:bg-transparent"
             onClick={() => setStep(step - 1)}
             disabled={step === 1}
           >
-            <Icon name="arrow-left" className="h-4 w-4" />
+            <Icon name="arrow-left" className="icon-nudge-left h-4 w-4" />
             Back
           </Button>
           {step < STEPS.length ? (
-            <Button onClick={next} disabled={!stepValid}>
+            <Button className="group hover:opacity-100" onClick={next} disabled={!stepValid}>
               Continue
-              <Icon name="arrow-right" className="h-4 w-4" />
+              <Icon name="arrow-right" className="icon-nudge-right h-4 w-4" />
             </Button>
           ) : (
-            <Button size="lg" onClick={start}>
-              <Icon name="sparkles" className="h-4 w-4" />
+            <Button size="lg" className="group hover:opacity-100" onClick={start}>
+              <Icon name="sparkles" className="icon-nudge-up h-4 w-4" />
               Start analysis
             </Button>
           )}
@@ -219,8 +222,12 @@ function Review({
       <h2 className="card-title">Review</h2>
       <ReviewRow label="Name" value={fullName} />
       <ReviewRow label="Resume" value={fileName} />
-      <ReviewRow label="Roles" value={roles.join(", ")} />
-      <ReviewRow label="Work mode" value={remote ? "Remote eligible" : "On-site / local"} />
+      {/* The first role is primary — what the resume is scored against — so call it out. */}
+      <ReviewRow label="Primary role" value={roles[0] ?? "—"} />
+      {roles.length > 1 && (
+        <ReviewRow label="Other roles" value={roles.slice(1).join(", ")} />
+      )}
+      <ReviewRow label="Work mode" value={remote ? "Remote" : "On-site / local"} />
       {employmentTypes.length > 0 && (
         <ReviewRow
           label="Employment"

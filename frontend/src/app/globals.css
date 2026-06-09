@@ -104,9 +104,27 @@
   from { transform: scaleX(0); opacity: 0; }
   to { transform: scaleX(1); opacity: 1; }
 }
-@keyframes text-shimmer {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
+@keyframes chip-in {
+  from { opacity: 0; transform: scale(0.85); }
+  to { opacity: 1; transform: scale(1); }
+}
+@keyframes chip-out {
+  from { opacity: 1; transform: scale(1); }
+  to { opacity: 0; transform: scale(0.85); }
+}
+@keyframes hop {
+  0%, 100% { transform: translateY(0); }
+  25% { transform: translateY(-35%); }
+  45% { transform: translateY(0); }
+  65% { transform: translateY(-15%); }
+  85% { transform: translateY(0); }
+}
+/* The selection circle sliding from its old segment (--from) to the new one (--to),
+   with a horizontal stretch mid-travel so it reads as a swipe. */
+@keyframes thumb-swipe {
+  0% { transform: translateX(var(--from)) scaleX(1); }
+  45% { transform: translateX(calc((var(--from) + var(--to)) / 2)) scaleX(1.4); }
+  100% { transform: translateX(var(--to)) scaleX(1); }
 }
 
 @layer base {

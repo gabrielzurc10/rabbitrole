@@ -25,9 +25,9 @@ export function HeroCta() {
     warmUp();
   }, []);
   return (
-    <Link href={authed ? "/resume/" : "/login/"} className="btn btn-primary btn-lg">
+    <Link href={authed ? "/resume/" : "/login/"} className="btn btn-primary btn-lg group hover:opacity-100">
       Analyze my resume
-      <Icon name="arrow-right" className="h-4 w-4" />
+      <Icon name="arrow-right" className="icon-nudge-right h-4 w-4" />
     </Link>
   );
 }

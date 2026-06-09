@@ -11,6 +11,7 @@ import java.time.Instant;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -61,16 +62,16 @@ class JobServiceTest {
                 new CityPreference("Austin", "TX"),
                 new CityPreference("Denver", "CO")));
 
-        when(client.search(eq("Backend Engineer"), eq("Austin, TX"), eq(false), anyList()))
+        when(client.search(eq("Backend Engineer"), eq("Austin, TX"), eq(false), anyList(), anyInt()))
                 .thenReturn(List.of(job("a"), job("b")));
-        when(client.search(eq("Backend Engineer"), eq("Denver, CO"), eq(false), anyList()))
+        when(client.search(eq("Backend Engineer"), eq("Denver, CO"), eq(false), anyList(), anyInt()))
                 .thenReturn(List.of(job("b"), job("c"))); // "b" overlaps
 
-        List<Job> result = service.forProfile(p, "resume text");
+        List<Job> result = service.forProfile(p, "resume text", 0);
 
         assertThat(result).extracting(Job::id).containsExactly("a", "b", "c"); // deduped
-        verify(client).search("Backend Engineer", "Austin, TX", false, List.of());
-        verify(client).search("Backend Engineer", "Denver, CO", false, List.of());
+        verify(client).search("Backend Engineer", "Austin, TX", false, List.of(), 1);
+        verify(client).search("Backend Engineer", "Denver, CO", false, List.of(), 1);
     }
 
     @Test
@@ -84,12 +85,12 @@ class JobServiceTest {
         Job austinA = new Job("id-1", "Engineer", "Acme", null, "Austin", "Austin", "TX", null, null, "desc", "http://x", null, null, null, null, null, null, null);
         Job austinDup = new Job("id-2", "Engineer", "Acme", null, "Austin", "Austin", "TX", null, null, "desc", "http://y", null, null, null, null, null, null, null);
 
-        when(client.search(eq("Backend Engineer"), eq("Austin, TX"), eq(false), anyList()))
+        when(client.search(eq("Backend Engineer"), eq("Austin, TX"), eq(false), anyList(), anyInt()))
                 .thenReturn(List.of(austinA));
-        when(client.search(eq("Backend Engineer"), eq("Dallas, TX"), eq(false), anyList()))
+        when(client.search(eq("Backend Engineer"), eq("Dallas, TX"), eq(false), anyList(), anyInt()))
                 .thenReturn(List.of(austinDup)); // same title/company/city, different id
 
-        List<Job> result = service.forProfile(p, "resume text");
+        List<Job> result = service.forProfile(p, "resume text", 0);
 
         assertThat(result).extracting(Job::id).containsExactly("id-1"); // first wins, dup dropped
     }
@@ -97,27 +98,27 @@ class JobServiceTest {
     @Test
     void remoteProfileIssuesRemoteSearch() {
         Profile p = profile(true, List.of(), List.of());
-        when(client.search(eq("Backend Engineer"), isNull(), eq(true), anyList()))
+        when(client.search(eq("Backend Engineer"), isNull(), eq(true), anyList(), anyInt()))
                 .thenReturn(List.of(job("a")));
 
-        List<Job> result = service.forProfile(p, "resume text");
+        List<Job> result = service.forProfile(p, "resume text", 0);
 
         assertThat(result).extracting(Job::id).containsExactly("a");
-        verify(client).search("Backend Engineer", null, true, List.of());
+        verify(client).search("Backend Engineer", null, true, List.of(), 1);
     }
 
     @Test
     void employmentTypeFilterKeepsSelectedAndUnknownDropsOthers() {
         Profile p = profile(false, List.of(EmploymentType.FULL_TIME),
                 List.of(new CityPreference("Austin", "TX")));
-        when(client.search(eq("Backend Engineer"), eq("Austin, TX"), eq(false), anyList()))
+        when(client.search(eq("Backend Engineer"), eq("Austin, TX"), eq(false), anyList(), anyInt()))
                 .thenReturn(List.of(
                         job("a", "full-time"), // selected → kept
                         job("b", null),        // no native type → kept (don't hide a maybe)
                         job("c", "contract"))  // a type they didn't pick → dropped
                 );
 
-        List<Job> result = service.forProfile(p, "resume text");
+        List<Job> result = service.forProfile(p, "resume text", 0);
 
         assertThat(result).extracting(Job::id).containsExactly("a", "b");
     }
@@ -125,10 +126,10 @@ class JobServiceTest {
     @Test
     void noResumeReturnsUnscored() {
         Profile p = profile(true, List.of(), List.of());
-        when(client.search(eq("Backend Engineer"), isNull(), eq(true), anyList()))
+        when(client.search(eq("Backend Engineer"), isNull(), eq(true), anyList(), anyInt()))
                 .thenReturn(List.of(job("a")));
 
-        List<Job> result = service.forProfile(p, null);
+        List<Job> result = service.forProfile(p, null, 0);
 
         assertThat(result).hasSize(1);
         assertThat(result.get(0).matchPercent()).isNull(); // scorer not invoked

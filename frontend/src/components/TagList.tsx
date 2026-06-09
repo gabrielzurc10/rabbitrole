@@ -25,7 +25,7 @@ export function TagList({ tags }: { tags: Tag[] }) {
                 {group.map((tag, i) => (
                   <button
                     key={`${sev}-${i}`}
-                    className="tag-chip"
+                    className="tag-chip group"
                     onClick={() => setActive(tag)}
                   >
                     <span className={`tag-dot ${SEVERITY_META[tag.severity].dot}`} />
@@ -39,7 +39,7 @@ export function TagList({ tags }: { tags: Tag[] }) {
                     </span>
                     <Icon
                       name="arrow-right"
-                      className="mt-1 h-4 w-4 text-muted-foreground"
+                      className="icon-nudge-right mt-1 h-4 w-4 text-muted-foreground"
                     />
                   </button>
                 ))}

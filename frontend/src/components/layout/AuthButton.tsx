@@ -33,13 +33,15 @@ export function AuthButton() {
   }, []);
 
   // While signing in, the navbar shouldn't offer "Sign in" (or a premature "Sign out").
-  if (pathname === "/login") return null;
+  // The static export uses trailing slashes, so pathname is "/login/".
+  if (pathname.startsWith("/login")) return null;
 
   // Pre-hydration: reserve the button's footprint (invisible) so resolving the real
   // state doesn't shift the layout — and crucially shows no wrong label.
   if (!mounted) {
     return (
       <span className="btn btn-ghost btn-sm invisible" aria-hidden="true">
+        <Icon name="log-in" className="h-4 w-4" />
         Sign in
       </span>
     );
@@ -51,10 +53,10 @@ export function AuthButton() {
     if (pathname.startsWith("/onboarding")) {
       return (
         <button
-          className="btn btn-sm text-muted-foreground hover:text-foreground"
+          className="btn btn-sm group text-foreground"
           onClick={() => logout()}
         >
-          <Icon name="log-out" className="h-4 w-4" />
+          <Icon name="log-out" className="icon-nudge-right h-4 w-4" />
           Sign out
         </button>
       );
@@ -62,7 +64,8 @@ export function AuthButton() {
     return null;
   }
   return (
-    <Link href="/login/" className="btn btn-primary btn-sm">
+    <Link href="/login/" className="btn btn-primary btn-sm group hover:opacity-100">
+      <Icon name="log-in" className="icon-nudge-right h-4 w-4" />
       Sign in
     </Link>
   );
