@@ -204,3 +204,15 @@
     }
   }
 }
+
+/* iOS Safari zooms into a focused form control whose font-size is < 16px. Inputs use
+   text-sm (14px) for the desktop design, so force 16px on small screens to suppress
+   that zoom (desktop keeps 14px). Left UNLAYERED on purpose so it wins over the
+   .input/.select component classes, which live in @layer components. */
+@media (max-width: 640px) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}

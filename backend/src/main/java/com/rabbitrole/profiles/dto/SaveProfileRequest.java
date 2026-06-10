@@ -5,6 +5,7 @@ import com.rabbitrole.profiles.EmploymentType;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.Size;
 
 import java.util.List;
 
@@ -17,12 +18,14 @@ import java.util.List;
  * validated ({@code @Valid} → its city/state are not blank).
  */
 public record SaveProfileRequest(
-        @NotBlank String fullName,
-        @NotEmpty List<@NotBlank String> targetRoles,
+        @NotBlank @Size(max = 200) String fullName,
+        // Roles feed the analysis prompt + JSearch query, so bound both the count and
+        // each role's length rather than trusting client input.
+        @NotEmpty @Size(max = 20) List<@NotBlank @Size(max = 200) String> targetRoles,
         boolean remote,
         List<EmploymentType> employmentTypes,
-        @Valid List<CityPreference> cities,
-        String resumeId,
-        String analysisId,
+        @Valid @Size(max = 50) List<CityPreference> cities,
+        @Size(max = 100) String resumeId,
+        @Size(max = 100) String analysisId,
         Integer score) {
 }
