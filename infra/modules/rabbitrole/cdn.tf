@@ -15,11 +15,12 @@ resource "aws_cloudfront_origin_access_control" "frontend" {
 resource "aws_cloudfront_function" "rewrite_uri" {
   name    = "${local.name}-spa-rewrite"
   runtime = "cloudfront-js-2.0"
-  comment = "Map directory/extensionless paths to their index.html"
+  comment = "Redirect www->apex (when on custom domain) + map directory paths to index.html"
   publish = true
   code    = <<-EOT
     function handler(event) {
       var request = event.request;
+      ${local.www_redirect_js}
       var uri = request.uri;
       if (uri.endsWith('/')) {
         request.uri += 'index.html';
@@ -36,6 +37,10 @@ resource "aws_cloudfront_distribution" "frontend" {
   default_root_object = "index.html"
   comment             = "${local.name} frontend"
   price_class         = "PriceClass_100" # cheapest: NA + EU edges
+
+  # Serve the site on rabbitrole.com + www when enabled (app_domain.tf), else only
+  # the default *.cloudfront.net host.
+  aliases = local.app_domain_enabled ? local.app_aliases : []
 
   origin {
     domain_name              = aws_s3_bucket.frontend.bucket_regional_domain_name
@@ -75,8 +80,21 @@ resource "aws_cloudfront_distribution" "frontend" {
     }
   }
 
-  viewer_certificate {
-    cloudfront_default_certificate = true
+  # Custom-domain cert (rabbitrole.com + www) when enabled; otherwise the free
+  # CloudFront default cert. Exactly one of these blocks renders.
+  dynamic "viewer_certificate" {
+    for_each = local.app_domain_enabled ? [1] : []
+    content {
+      acm_certificate_arn      = aws_acm_certificate_validation.app[0].certificate_arn
+      ssl_support_method       = "sni-only"
+      minimum_protocol_version = "TLSv1.2_2021"
+    }
+  }
+  dynamic "viewer_certificate" {
+    for_each = local.app_domain_enabled ? [] : [1]
+    content {
+      cloudfront_default_certificate = true
+    }
   }
 
   tags = local.tags

@@ -9,6 +9,12 @@ module "rabbitrole" {
 
   google_client_id     = var.google_client_id
   google_client_secret = var.google_client_secret
+
+  domain                    = var.domain
+  route53_zone_id           = var.route53_zone_id
+  enable_ses_email          = var.enable_ses_email
+  enable_custom_auth_domain = var.enable_custom_auth_domain
+  enable_app_domain         = var.enable_app_domain
 }
 
 output "api_url" {
@@ -17,6 +23,10 @@ output "api_url" {
 
 output "cloudfront_domain" {
   value = module.rabbitrole.cloudfront_domain
+}
+
+output "app_url" {
+  value = module.rabbitrole.app_url
 }
 
 output "cloudfront_distribution_id" {
@@ -43,10 +53,24 @@ output "cognito_hosted_ui_domain" {
   value = module.rabbitrole.cognito_hosted_ui_domain
 }
 
+output "google_oauth_redirect_uri" {
+  value = module.rabbitrole.google_oauth_redirect_uri
+}
+
 output "cognito_issuer" {
   value = module.rabbitrole.cognito_issuer
 }
 
 output "resource_group" {
   value = module.rabbitrole.resource_group
+}
+
+# DNS records to add for the SES email sender (paste at your registrar unless
+# route53_zone_id is set). Run: terraform output ses_dns_records
+output "ses_dns_records" {
+  value = module.rabbitrole.ses_dns_records
+}
+
+output "ses_identity_arn" {
+  value = module.rabbitrole.ses_identity_arn
 }

@@ -26,17 +26,35 @@ resource "aws_cognito_user_pool" "main" {
 
   # One account per email: link a Google sign-up to an existing native user instead of
   # creating a duplicate (handler in auth_linking.tf / lambdas/cognito-link).
+  # custom_message brands the OTP email with the logo (auth_message.tf).
   lambda_config {
-    pre_sign_up = aws_lambda_function.cognito_link.arn
+    pre_sign_up    = aws_lambda_function.cognito_link.arn
+    custom_message = aws_lambda_function.cognito_message.arn
+  }
+
+  # Send email-OTP codes via SES from our verified domain (email.tf) so they
+  # land in the inbox, not spam. Absent until `enable_ses_email` is flipped on
+  # (only after the SES identity is verified + has production access); until
+  # then Cognito uses its default sender. Two-phase to keep applies safe.
+  dynamic "email_configuration" {
+    for_each = var.enable_ses_email && local.ses_enabled ? [1] : []
+    content {
+      email_sending_account = "DEVELOPER"
+      source_arn            = aws_ses_domain_identity.main[0].arn
+      from_email_address    = "rabbitrole <no-reply@${var.domain}>"
+    }
   }
 
   tags = local.tags
 }
 
-# Hosted UI domain — a free Cognito prefix domain
-# (https://<prefix>.auth.<region>.amazoncognito.com). The prefix is globally
-# unique across all AWS accounts; "rabbitrole-{env}" is fine for the portfolio.
+# Hosted UI domain. Default: a free Cognito prefix domain
+# (https://<prefix>.auth.<region>.amazoncognito.com). When enable_custom_auth_domain
+# is on, this is replaced by the branded custom domain below (auth_domain.tf), so
+# the Google OAuth redirect lives on rabbitrole.com instead of amazoncognito.com.
+# A pool has one domain, so the two are mutually exclusive (count toggles).
 resource "aws_cognito_user_pool_domain" "main" {
+  count        = local.use_custom_auth_domain ? 0 : 1
   domain       = local.name
   user_pool_id = aws_cognito_user_pool.main.id
 }
@@ -96,15 +114,23 @@ resource "aws_cognito_user_pool_client" "web" {
 
 locals {
   # Where the Hosted UI returns users after login/logout. CloudFront for the
-  # deployed site; localhost:3000 so `npm run dev` can run the real flow too.
-  auth_redirect_urls = [
-    "https://${aws_cloudfront_distribution.frontend.domain_name}/login",
-    "http://localhost:3000/login",
-  ]
+  # deployed site; localhost:3000 so `npm run dev` can run the real flow too;
+  # rabbitrole.com + www once the app is served from the custom domain.
+  auth_redirect_urls = concat(
+    [
+      "https://${aws_cloudfront_distribution.frontend.domain_name}/login",
+      "http://localhost:3000/login",
+    ],
+    local.app_domain_enabled ? [
+      "https://${var.domain}/login",
+      "https://www.${var.domain}/login",
+    ] : [],
+  )
 
   # JWT issuer the backend resource server validates against (api.tf / outputs).
   cognito_issuer = "https://cognito-idp.${var.region}.amazonaws.com/${aws_cognito_user_pool.main.id}"
 
-  # Full Hosted UI hostname the SPA redirects to.
-  cognito_hosted_ui_domain = "${aws_cognito_user_pool_domain.main.domain}.auth.${var.region}.amazoncognito.com"
+  # Full Hosted UI hostname the SPA redirects to — the custom domain when enabled,
+  # else the Cognito prefix host.
+  cognito_hosted_ui_domain = local.use_custom_auth_domain ? local.auth_domain_name : "${aws_cognito_user_pool_domain.main[0].domain}.auth.${var.region}.amazoncognito.com"
 }

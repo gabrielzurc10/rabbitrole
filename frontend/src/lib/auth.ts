@@ -114,13 +114,37 @@ export async function login(provider?: string): Promise<void> {
   window.location.assign(`https://${DOMAIN}/oauth2/authorize?${params.toString()}`);
 }
 
+/** Turn a Cognito/OAuth error param into a short, user-readable sign-in message. */
+function friendlyAuthError(raw: string): string {
+  const text = raw.replace(/\+/g, " ").trim();
+  if (/redirect_mismatch|redirect_uri|invalid_request|invalid_client/i.test(text)) {
+    return "Sign-in isn't available right now. Please try again later.";
+  }
+  if (/access_denied|cancel|denied/i.test(text)) {
+    return "Sign-in was cancelled.";
+  }
+  return "Couldn't complete sign-in. Please try again.";
+}
+
 /**
- * On the /login page, complete the redirect: swap the `?code=` for tokens.
- * Returns true if a sign-in was handled (caller should route onward).
+ * On the /login page, complete the redirect: swap the `?code=` for tokens, or
+ * surface an `?error=` the provider sent back. Returns true if a sign-in was
+ * handled (caller should route onward); throws with a friendly message on error.
  */
 export async function handleRedirectCallback(): Promise<boolean> {
   if (!isConfigured) return false;
-  const code = new URLSearchParams(window.location.search).get("code");
+  const params = new URLSearchParams(window.location.search);
+
+  // A failed federated/OAuth sign-in comes back as ?error=...&error_description=...
+  // (e.g. the user cancels, or Google/Cognito rejects the request). Surface it on
+  // the sign-in page instead of dropping the user on Cognito's hosted error screen.
+  const oauthError = params.get("error_description") || params.get("error");
+  if (oauthError) {
+    window.history.replaceState({}, "", window.location.pathname); // don't re-trigger on refresh
+    throw new Error(friendlyAuthError(oauthError));
+  }
+
+  const code = params.get("code");
   if (!code) return false;
 
   const verifier = sessionStorage.getItem(VERIFIER_KEY) ?? "";
