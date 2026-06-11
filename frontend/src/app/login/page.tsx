@@ -211,7 +211,8 @@ function LoginCard() {
                   {isConfigured ? (
                     <>
                       We emailed a code to{" "}
-                      <span className="font-medium text-foreground">{email}</span>.
+                      <span className="font-medium text-foreground">{email}</span>.{" "}
+                      Don&apos;t see it? Check your spam folder.
                     </>
                   ) : (
                     <>Demo mode — enter any code to continue.</>
@@ -222,7 +223,7 @@ function LoginCard() {
                   autoComplete="one-time-code"
                   required
                   className="input text-center tracking-[0.3em]"
-                  placeholder="000000000"
+                  placeholder="0000000"
                   value={code}
                   onChange={(e) => setCode(e.target.value)}
                   autoFocus
