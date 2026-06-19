@@ -15,20 +15,6 @@ import { setOnboarded, PROFILE_CACHE_KEY, JOBS_CACHE_KEY, RESUME_CACHE_KEY } fro
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 
-let warmed = false;
-/**
- * Fire-and-forget ping to the cheap /healthz endpoint so the Lambda container
- * starts spinning up while the user is still reading/typing — turning what would
- * be a cold start on their first real request (sign-in, upload) into a warm one.
- * Safe to call from multiple places: it fires at most once per page load and
- * swallows every error (e.g. the local backend not running in demo mode).
- */
-export function warmUp(): void {
-  if (warmed || typeof window === "undefined") return;
-  warmed = true;
-  void fetch(`${BASE_URL}/healthz`, { method: "GET", cache: "no-store" }).catch(() => {});
-}
-
 /** Error carrying the backend's message + HTTP status, for the UI to show. */
 export class ApiError extends Error {
   constructor(

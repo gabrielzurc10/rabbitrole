@@ -257,8 +257,10 @@ function DemoJobCard({ job }: { job: (typeof JOBS)[number] }) {
     <div className="job-card">
       <div className="job-card-main">
         <div className="flex items-start gap-3">
+          {/* loading="lazy": below-the-fold decorative logos — stops Next/React from
+              emitting a <link rel=preload> that fires the "preloaded but not used" warning. */}
           {/* eslint-disable-next-line @next/next/no-img-element -- static export, unoptimized */}
-          <img src={job.logo} alt="" className="job-card-logo" />
+          <img src={job.logo} alt="" loading="lazy" className="job-card-logo" />
           <div className="min-w-0">
             <h3 className="job-card-title">{job.title}</h3>
             <p className="job-card-company">{job.company}</p>

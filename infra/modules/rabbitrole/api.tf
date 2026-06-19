@@ -155,12 +155,23 @@ resource "aws_lambda_alias" "live" {
 
 # --- API Gateway (HTTP API) ------------------------------------------------
 
-# CORS is handled by the Spring app (CorsConfig), not here — so we don't set
-# cors_configuration (which would add duplicate Access-Control-* headers).
+# CORS is handled here by API Gateway (it answers preflight directly and adds the
+# Access-Control-* headers). The serverless-java-container runtime doesn't reliably
+# emit the Spring app's CorsFilter headers, so the app's CorsConfig now only serves
+# local dev (the aws-profile SecurityConfig drops `.cors()` to avoid double headers).
+# No credentials (auth is a bearer token), so `*` origins are fine.
 resource "aws_apigatewayv2_api" "http" {
   name          = "${local.name}-api"
   protocol_type = "HTTP"
-  tags          = local.tags
+
+  cors_configuration {
+    allow_origins = ["*"]
+    allow_methods = ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+    allow_headers = ["*"]
+    max_age       = 3600
+  }
+
+  tags = local.tags
 }
 
 resource "aws_apigatewayv2_integration" "lambda" {

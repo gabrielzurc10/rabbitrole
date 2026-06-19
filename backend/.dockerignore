@@ -1,8 +1,0 @@
-# Keep the build context small + reproducible: never ship local build output,
-# IDE/gradle caches, or git metadata into the image.
-.gradle
-build
-.idea
-*.iml
-.git
-.DS_Store
