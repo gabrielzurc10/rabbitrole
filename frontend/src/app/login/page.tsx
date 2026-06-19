@@ -184,6 +184,8 @@ function LoginCard() {
                     disabled={busy}
                     onClick={startGoogle}
                   >
+                    {/* eslint-disable-next-line @next/next/no-img-element -- static export, unoptimized */}
+                    <img src="/icons/google.svg" alt="" className="h-5 w-5" />
                     Continue with Google
                   </Button>
                 </div>
@@ -215,7 +217,7 @@ function LoginCard() {
                       Don&apos;t see it? Check your spam folder.
                     </>
                   ) : (
-                    <>Demo mode — enter any code to continue.</>
+                    <>Demo mode: enter any code to continue.</>
                   )}
                 </p>
                 <input
@@ -260,7 +262,7 @@ function LoginCard() {
 
             <p className="mt-6 text-center text-xs text-muted-foreground">
               {isConfigured
-                ? "Passwordless — we email you a one-time code."
+                ? "Passwordless: we email you a one-time code."
                 : "Demo mode: no sign-in configured locally."}
             </p>
 

@@ -136,7 +136,7 @@ export default function OnboardingPage() {
               <div>
                 <label className="label">Which roles are you targeting?</label>
                 <p className="mb-3 text-sm text-muted-foreground">
-                  Add one or more. The first is your primary role — we score your resume against it.
+                  Add one or more. The first is your primary role; we score your resume against it.
                 </p>
                 <RoleChipInput value={roles} onChange={setRoles} />
               </div>
@@ -155,7 +155,7 @@ export default function OnboardingPage() {
                   </div>
                 )}
                 <div>
-                  <label className="label">Employment type (optional — pick any)</label>
+                  <label className="label">Employment type (optional, pick any)</label>
                   <EmploymentTypeSelector value={employmentTypes} onChange={setEmploymentTypes} />
                 </div>
               </div>

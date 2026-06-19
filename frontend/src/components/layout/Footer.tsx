@@ -36,7 +36,7 @@ const LINK_COLUMNS = [
 
 /**
  * Site footer: a brand block + tagline alongside grouped navigation columns, with a
- * bottom bar for the copyright and build credit. Rendered once from the root layout
+ * centered copyright bar below. Rendered once from the root layout
  * but scoped by pathname so it only appears on the landing, profile, and legal pages.
  * The static export uses trailing slashes, so normalize before matching.
  */
@@ -63,7 +63,7 @@ export function Footer() {
               </span>
             </Link>
             <p className="footer-tagline">
-              AI resume reviewer &amp; job matcher. Get clear, prioritized feedback —
+              AI resume reviewer &amp; job matcher. Get clear, prioritized feedback,
               then the live jobs you genuinely match.
             </p>
           </div>
@@ -87,7 +87,6 @@ export function Footer() {
 
         <div className="footer-bottom">
           <p>© {new Date().getFullYear()} rabbitrole. All rights reserved.</p>
-          <p>Built with Next.js &amp; Spring Boot.</p>
         </div>
       </div>
     </footer>

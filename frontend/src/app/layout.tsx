@@ -8,7 +8,7 @@ import { Footer } from "@/components/layout/Footer";
 export const metadata: Metadata = {
   title: "rabbitrole",
   description:
-    "Upload your resume, pick a role, and get AI feedback with critical/warning/optional tags plus matched jobs.",
+    "Upload your resume, pick a role, and get AI feedback with urgent/critical/optional tags plus matched jobs.",
 };
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });

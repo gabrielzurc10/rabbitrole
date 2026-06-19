@@ -38,24 +38,19 @@ export function NavTabs() {
         href="/jobs/"
         aria-current={onJobs ? "page" : undefined}
         className={cn(
-          "btn btn-sm group relative",
-          onJobs ? "text-primary font-medium" : "text-foreground",
+          "btn btn-sm group",
+          onJobs ? "bg-primary text-white font-medium hover:bg-primary/90" : "text-foreground hover:bg-muted",
         )}
       >
         <Icon name="briefcase" className="icon-nudge-up h-4 w-4" />
-        <span className="relative">
-          Jobs
-          {onJobs && (
-            <span className="nav-underline motion-safe:animate-[nav-underline_0.22s_ease-out]" aria-hidden="true" />
-          )}
-        </span>
+        Jobs
       </Link>
       <Link
         href="/resume/"
         aria-current={onResume ? "page" : undefined}
         className={cn(
-          "btn btn-sm group relative",
-          onResume ? "text-primary font-medium" : "text-foreground",
+          "btn btn-sm group",
+          onResume ? "bg-primary text-white font-medium hover:bg-primary/90" : "text-foreground hover:bg-muted",
         )}
       >
         {analyzing ? (
@@ -63,28 +58,18 @@ export function NavTabs() {
         ) : (
           <Icon name="file-text" className="icon-nudge-up h-4 w-4" />
         )}
-        <span className="relative">
-          Resume
-          {onResume && (
-            <span className="nav-underline motion-safe:animate-[nav-underline_0.22s_ease-out]" aria-hidden="true" />
-          )}
-        </span>
+        Resume
       </Link>
       <Link
         href="/profile/"
         aria-current={onProfile ? "page" : undefined}
         className={cn(
-          "btn btn-sm group relative",
-          onProfile ? "text-primary font-medium" : "text-foreground",
+          "btn btn-sm group",
+          onProfile ? "bg-primary text-white font-medium hover:bg-primary/90" : "text-foreground hover:bg-muted",
         )}
       >
         <Icon name="user" className="icon-nudge-up h-4 w-4" />
-        <span className="relative">
-          Profile
-          {onProfile && (
-            <span className="nav-underline motion-safe:animate-[nav-underline_0.22s_ease-out]" aria-hidden="true" />
-          )}
-        </span>
+        Profile
       </Link>
     </>
   );

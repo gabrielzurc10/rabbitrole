@@ -7,14 +7,14 @@ export const SEVERITY_META: Record<
   { label: string; description: string; dot: string; text: string; badge: string }
 > = {
   critical: {
-    label: "Critical",
+    label: "Urgent",
     description: "Fix before applying",
     dot: "bg-critical",
     text: "text-critical",
     badge: "badge-critical",
   },
   warning: {
-    label: "Warning",
+    label: "Critical",
     description: "Should improve",
     dot: "bg-warning",
     text: "text-warning",

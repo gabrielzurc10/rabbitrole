@@ -123,7 +123,7 @@ export default function ProfilePage() {
           </div>
           <Button
             variant="outline"
-            className="group dark:bg-muted dark:hover:bg-border"
+            className="group"
             onClick={() => setSignOutOpen(true)}
           >
             <Icon name="log-out" className="icon-nudge-right h-4 w-4" />
@@ -192,7 +192,7 @@ export default function ProfilePage() {
             </div>
             <Button
               variant="outline"
-              className="group text-critical"
+              className="group text-foreground"
               onClick={() => setDeleteOpen(true)}
             >
               <Icon name="trash" className="icon-nudge-up h-4 w-4" />

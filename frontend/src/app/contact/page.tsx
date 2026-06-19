@@ -21,7 +21,7 @@ export default function ContactPage() {
           rabbitrole, you can reach us by email:
         </p>
         <p className="group inline-flex items-center gap-2">
-          <Icon name="mail" className="icon-nudge-up h-4 w-4 text-primary" />
+          <Icon name="mail" className="icon-nudge-up h-4 w-4 text-primary-strong" />
           <a href={`mailto:${CONTACT_EMAIL}`} className="legal-link">
             {CONTACT_EMAIL}
           </a>

@@ -64,13 +64,11 @@ export function MobileMenu() {
                 aria-current={active ? "page" : undefined}
                 className={cn(
                   "group flex items-center gap-2 rounded-md px-3 py-2 text-sm",
-                  active ? "font-medium text-primary" : "text-foreground",
+                  active ? "bg-primary font-medium text-white hover:bg-primary/90" : "text-foreground hover:bg-muted",
                 )}
               >
                 <Icon name={t.icon} className="icon-nudge-up h-4 w-4" />
-                <span className={cn(active && "underline decoration-2 underline-offset-4")}>
-                  {t.label}
-                </span>
+                <span>{t.label}</span>
               </Link>
             );
           })}

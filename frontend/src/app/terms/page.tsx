@@ -35,7 +35,7 @@ export default function TermsPage() {
         <p>
           You retain ownership of the resumes and information you upload. You
           grant rabbitrole permission to process that content to provide the
-          service — including sending it to third-party AI providers to generate
+          service, including sending it to third-party AI providers to generate
           analysis and matches. See our{" "}
           <Link href="/privacy/" className="legal-link">
             Privacy Policy

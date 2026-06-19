@@ -1,12 +1,17 @@
+import { cn } from "@/lib/cn";
+
 /** Animated SVG progress ring (CSS-only) showing a match percentage. */
 export function MatchRing({
   percent,
   size = 56,
+  toneClass = "text-primary",
 }: {
   percent: number;
   size?: number;
+  /** Color of the progress arc (defaults to the brand green). */
+  toneClass?: string;
 }) {
-  const stroke = 8;
+  const stroke = 13;
   const radius = (size - stroke) / 2;
   const circumference = 2 * Math.PI * radius;
   const offset = circumference - (percent / 100) * circumference;
@@ -24,7 +29,7 @@ export function MatchRing({
           strokeWidth={stroke}
         />
         <circle
-          className="match-ring-value"
+          className={cn("match-ring-value", toneClass)}
           cx={size / 2}
           cy={size / 2}
           r={radius}

@@ -80,7 +80,7 @@ export function CityProximityEditor({
 
       {value.length === 0 ? (
         <p className="mt-2 text-sm text-muted-foreground">
-          All locations — add a city to narrow your search.
+          All locations. Add a city to narrow your search.
         </p>
       ) : (
         <div className="chip-input mt-3">

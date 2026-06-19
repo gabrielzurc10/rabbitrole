@@ -7,7 +7,7 @@
 /*
  * Design tokens. Values are HSL channels ("H S% L%") so they compose with
  * hsl() in the @theme map below and can be reused with opacity.
- * Accent = emerald→teal; neutrals = slate.
+ * Accent = spring-green→teal (matches the icon); neutrals = slate.
  */
 :root {
   --background: 0 0% 100%;
@@ -21,18 +21,27 @@
 
   --border: 214 32% 91%;
   --input: 214 32% 91%;
-  --ring: 160 84% 39%;
+  --ring: 142 69% 58%;
 
-  /* brand */
-  --primary: 160 84% 39%;
+  /* brand — the icon's exact gradient: spring-green #4ade80 (142 69% 58%) → teal
+     #2dd4bf (172 66% 50%). Single source of truth: every green fill, ring AND the
+     gradients (.btn-primary / .gradient-text / ribbons) trace these two values.
+     --primary-strong is a deeper shade of the SAME hue for green TEXT on light
+     surfaces, which the bright green is too pale for. Both greens are bright on dark. */
+  --primary: 142 69% 58%;
+  --primary-strong: 142 69% 50%;
   --primary-foreground: 0 0% 100%;
-  --accent: 173 80% 40%;
+  --accent: 172 66% 50%;
   --accent-foreground: 0 0% 100%;
 
-  /* severity */
-  --critical: 0 72% 51%;
-  --warning: 38 92% 50%;
-  --optional: 199 89% 48%;
+  /* severity — vivid token for dots/fills; -strong is the readable text shade on
+     light surfaces (same light/dark system as --primary / --primary-strong). */
+  --critical: 0 88% 52%;
+  --critical-strong: 0 84% 50%;
+  --warning: 36 98% 50%;
+  --warning-strong: 34 94% 44%;
+  --optional: 205 96% 48%;
+  --optional-strong: 205 94% 46%;
 
   --radius: 0.75rem;
 }
@@ -49,16 +58,20 @@
 
   --border: 217 33% 18%;
   --input: 217 33% 18%;
-  --ring: 160 84% 45%;
+  --ring: 142 69% 58%;
 
-  --primary: 158 79% 45%;
+  --primary: 142 69% 58%;
+  --primary-strong: 142 69% 58%;
   --primary-foreground: 222 47% 7%;
-  --accent: 173 80% 46%;
+  --accent: 172 66% 50%;
   --accent-foreground: 222 47% 7%;
 
-  --critical: 0 72% 58%;
-  --warning: 38 92% 55%;
-  --optional: 199 89% 56%;
+  --critical: 0 88% 64%;
+  --critical-strong: 0 88% 64%;
+  --warning: 36 98% 56%;
+  --warning-strong: 36 98% 56%;
+  --optional: 205 96% 58%;
+  --optional-strong: 205 96% 58%;
 }
 
 /* Map tokens to Tailwind utilities (bg-background, text-primary, rounded-lg, ...). */
@@ -73,12 +86,16 @@
   --color-input: hsl(var(--input));
   --color-ring: hsl(var(--ring));
   --color-primary: hsl(var(--primary));
+  --color-primary-strong: hsl(var(--primary-strong));
   --color-primary-foreground: hsl(var(--primary-foreground));
   --color-accent: hsl(var(--accent));
   --color-accent-foreground: hsl(var(--accent-foreground));
   --color-critical: hsl(var(--critical));
+  --color-critical-strong: hsl(var(--critical-strong));
   --color-warning: hsl(var(--warning));
+  --color-warning-strong: hsl(var(--warning-strong));
   --color-optional: hsl(var(--optional));
+  --color-optional-strong: hsl(var(--optional-strong));
 
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
@@ -99,10 +116,6 @@
 }
 @keyframes shimmer {
   100% { transform: translateX(100%); }
-}
-@keyframes nav-underline {
-  from { transform: scaleX(0); opacity: 0; }
-  to { transform: scaleX(1); opacity: 1; }
 }
 @keyframes chip-in {
   from { opacity: 0; transform: scale(0.85); }
@@ -151,12 +164,17 @@
   85% { --num: var(--target); }
   100% { --num: 0; }
 }
-@keyframes tag-pulse {
-  0%, 20%, 100% { box-shadow: 0 0 15px rgba(0, 0, 0, 0.1); transform: scale(1); }
-  10% {
-    box-shadow: 0 0 0 2px hsl(var(--primary) / 0.45), 0 0 22px rgba(0, 0, 0, 0.14);
-    transform: scale(1.015);
-  }
+/* The demo feedback modal popping open over the Critical tag, holding, then closing.
+   The card keeps its translate(-50%,-50%) centering through the scale. */
+@keyframes demo-modal-overlay {
+  0%, 12% { opacity: 0; }
+  22%, 80% { opacity: 1; }
+  90%, 100% { opacity: 0; }
+}
+@keyframes demo-modal {
+  0%, 12% { opacity: 0; transform: translate(-50%, -50%) scale(0.95); }
+  22%, 80% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  90%, 100% { opacity: 0; transform: translate(-50%, -50%) scale(0.95); }
 }
 @keyframes vscroll {
   from { transform: translateY(0); }

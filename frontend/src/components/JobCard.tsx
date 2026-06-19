@@ -9,16 +9,8 @@ import { EMPLOYMENT_LABELS } from "@/components/EmploymentTypeSelector";
 import { ErrorAlert } from "@/components/ui/alert";
 import { Icon } from "@/components/ui/icon";
 import { getJobReasoning, ApiError } from "@/lib/api";
+import { matchLabel, matchTone } from "@/lib/match";
 import { cn } from "@/lib/cn";
-
-/** Qualitative label for the match ring — derived from our own score, no external data. */
-function matchLabel(pct: number | null): string {
-  if (pct == null) return "Not scored";
-  if (pct >= 80) return "Great match";
-  if (pct >= 60) return "Good match";
-  if (pct >= 40) return "Fair match";
-  return "Weak match";
-}
 
 const SALARY_PERIOD_SUFFIX: Record<string, string> = {
   YEAR: "/yr",
@@ -91,6 +83,7 @@ export function JobCard({ job }: { job: Job }) {
   const salary = formatSalary(job);
   const posted = formatPosted(job.postedAt);
   const hasMeta = Boolean(isRemote || location || employmentLabel || salary || posted);
+  const tone = matchTone(job.matchPercent);
 
   async function toggleReasoning() {
     const next = !expanded;
@@ -214,6 +207,10 @@ export function JobCard({ job }: { job: Job }) {
             parent's space-y gap; the inner panel's own mt-4 collapses with the content. */}
         <Collapse open={expanded} bleedShadow={false} className="!mt-0">
           <div className="job-reason-panel mt-4">
+            <div className="job-reason-heading">
+              <Icon name="sparkles" className="h-3.5 w-3.5 shrink-0" />
+              Match reasoning
+            </div>
             {loading && (
               <div className="space-y-2" aria-label="Loading reasoning" role="status">
                 <Skeleton className="h-3 w-full" />
@@ -222,15 +219,17 @@ export function JobCard({ job }: { job: Job }) {
               </div>
             )}
             {error && <ErrorAlert message={error} />}
-            {reasoning && <p className="text-sm text-muted-foreground">{reasoning}</p>}
+            {reasoning && <p className="job-reason-text">{reasoning}</p>}
           </div>
         </Collapse>
       </div>
 
       {/* Match panel */}
-      <div className="job-card-match">
-        <MatchRing percent={job.matchPercent ?? 0} size={84} />
-        <span className="job-card-match-label">{matchLabel(job.matchPercent)}</span>
+      <div className={cn("job-card-match", tone.panel)}>
+        <MatchRing percent={job.matchPercent ?? 0} size={84} toneClass={tone.ring} />
+        <span className={cn("job-card-match-label", tone.text)}>
+          {matchLabel(job.matchPercent)}
+        </span>
       </div>
     </div>
   );
