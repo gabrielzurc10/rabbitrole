@@ -1,0 +1,6 @@
+Placeholder Lambda artifact.
+
+Terraform seeds the backend function with this stub so the function + alias can be
+created in a single apply. CI replaces it out-of-band with the real Gradle-built
+app.zip via `aws lambda update-function-code` (from the artifacts bucket) and
+`publish-version`, then repoints the `live` alias. Never invoked.

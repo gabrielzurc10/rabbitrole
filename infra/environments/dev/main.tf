@@ -37,8 +37,16 @@ output "frontend_bucket" {
   value = module.rabbitrole.frontend_bucket
 }
 
-output "ecr_repository_url" {
-  value = module.rabbitrole.ecr_repository_url
+output "artifacts_bucket" {
+  value = module.rabbitrole.artifacts_bucket
+}
+
+output "lambda_function_name" {
+  value = module.rabbitrole.lambda_function_name
+}
+
+output "lambda_alias" {
+  value = module.rabbitrole.lambda_alias
 }
 
 output "cognito_user_pool_id" {

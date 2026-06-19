@@ -39,7 +39,7 @@ export function PreferenceFields({
       </div>
 
       <div>
-        <label className="label">Work mode</label>
+        <label className="label">Work model</label>
         <RemoteToggle value={remote} onChange={onRemoteChange} />
       </div>
 

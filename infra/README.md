@@ -32,7 +32,7 @@ terraform plan        # review; apply only when ready
 cd infra/environments/dev && terraform destroy   # -> ~$0/mo
 ```
 
-App buckets use `force_destroy` and ECR uses `force_delete`, so destroy is clean
+App buckets use `force_destroy`, so destroy is clean
 (⚠️ permanently deletes uploaded resumes + the static site — fine for a portfolio).
 `bootstrap/` is intentionally **excluded** so destroy/recreate keeps working (~$0.01/mo).
 
@@ -43,5 +43,8 @@ App buckets use `force_destroy` and ECR uses `force_delete`, so destroy is clean
 - **DynamoDB** tables (`profiles`, `resumes`, `analyses`) use **on-demand** billing —
   ~$0 idle, always warm (no auto-pause resume penalty).
 - Secrets live in **SSM Parameter Store**, passed in via `TF_VAR_*`.
-- `lambda_function.image_uri` is `ignore_changes`d — CI updates the image
-  out-of-band (Phase 6), so Terraform won't fight the deploy.
+- The backend is a **zip Lambda on `java21` + SnapStart**, seeded from a placeholder;
+  CI ships real code out-of-band (`update-function-code` from the artifacts bucket +
+  `publish-version`) and repoints the `live` alias, so the function's `filename` is
+  `ignore_changes`d and Terraform won't fight the deploy. API Gateway invokes the
+  alias so requests hit the SnapStart'd version.

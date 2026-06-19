@@ -1,5 +1,7 @@
 package com.rabbitrole.config;
 
+import static org.springframework.security.web.util.matcher.AntPathRequestMatcher.antMatcher;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
@@ -16,6 +18,13 @@ import org.springframework.security.web.SecurityFilterChain;
  * issuer-uri (see application.yml). Stateless — no sessions, no CSRF, since the
  * SPA authenticates with a bearer token. The user's {@code sub} is then read by
  * {@link com.rabbitrole.common.CurrentUser} to scope data per account.
+ *
+ * <p>Matchers use {@code antMatcher(...)} (AntPathRequestMatcher) rather than the
+ * default String form. On Lambda the app runs inside aws-serverless-java-container's
+ * servlet-less MVC, where {@code ServletRegistration.getMappings()} is null; a String
+ * {@code requestMatchers} would resolve to an MvcRequestMatcher and pull in Spring
+ * Security's HandlerMappingIntrospector cache filter, which NPEs on that null. Ant
+ * matchers are path-based and skip the introspector entirely.
  */
 @Configuration
 @EnableWebSecurity
@@ -31,11 +40,11 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // CORS preflight (OPTIONS) is handled by the CorsFilter above,
                         // but permit it explicitly as well so it never hits auth.
-                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        .requestMatchers("/healthz", "/actuator/health", "/error").permitAll()
+                        .requestMatchers(antMatcher(HttpMethod.OPTIONS, "/**")).permitAll()
+                        .requestMatchers(antMatcher("/healthz"), antMatcher("/actuator/health"), antMatcher("/error")).permitAll()
                         // Passwordless sign-in bootstrap runs pre-login (no token).
-                        .requestMatchers(HttpMethod.POST, "/api/auth/email/start").permitAll()
-                        .requestMatchers("/api/**").authenticated()
+                        .requestMatchers(antMatcher(HttpMethod.POST, "/api/auth/email/start")).permitAll()
+                        .requestMatchers(antMatcher("/api/**")).authenticated()
                         .anyRequest().permitAll())
                 .oauth2ResourceServer(oauth -> oauth.jwt(Customizer.withDefaults()));
         return http.build();
