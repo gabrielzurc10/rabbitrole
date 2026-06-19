@@ -4,15 +4,15 @@
 # TF_VAR_* names Terraform expects, so `make deploy` works without a tfvars
 # file. Run all targets from the repo root.
 #
-# FIRST-TIME DEPLOY ORDER (see DEPLOY.md): the Lambda is a container image and
-# AWS won't create it until an image exists in ECR. So the first deploy is:
-#   make bootstrap   # one-time: state bucket + lock table + CI user
+# FIRST-TIME DEPLOY ORDER (see DEPLOY.md): the zip Lambda is created from a
+# placeholder in a single apply (no ECR chicken-and-egg). So the first deploy is:
+#   make bootstrap      # one-time: state bucket + lock table + CI user
 #   make init
-#   make ecr         # create just the ECR repo
-#   make image       # build + push the backend image
-#   make deploy      # full apply (Lambda now finds the image)
-#   make frontend    # build the site with TF outputs + sync to S3
-# Routine redeploys are just: make image && make deploy && make frontend
+#   make deploy         # full apply (creates the function, alias, artifacts bucket)
+#   make build-backend  # build app.zip, publish a SnapStart version, repoint the alias
+#   make frontend       # build the site with TF outputs + sync to S3
+# Routine redeploys are just: make build-backend && make frontend
+# (run `make deploy` only when the Terraform itself changes).
 
 SHELL     := /bin/bash
 ROOT      := $(CURDIR)
@@ -20,7 +20,6 @@ REGION    ?= us-east-1
 ENV_FILE  := .env
 BOOTSTRAP := infra/bootstrap
 ENV       := infra/environments/dev
-LAMBDA    := rabbitrole-dev-backend
 
 # Source .env and re-export the app secrets under their TF_VAR_* names.
 # Single line on purpose: make runs each recipe line in its own shell.
@@ -31,19 +30,18 @@ TF_ENV = set -a; [ -f $(ENV_FILE) ] && . ./$(ENV_FILE); set +a; export TF_VAR_op
 # in backend.tf). bootstrap must have created it first.
 TF_INIT = terraform init -reconfigure -backend-config="bucket=rabbitrole-tfstate-$$(aws sts get-caller-identity --query Account --output text)"
 
-.PHONY: help bootstrap init validate plan ecr deploy image frontend destroy
+.PHONY: help bootstrap init validate plan deploy build-backend frontend destroy
 
 help:
 	@echo "rabbitrole infra targets (run from repo root):"
-	@echo "  bootstrap   create remote-state bucket + lock table + CI user (one-time)"
-	@echo "  init        terraform init"
-	@echo "  validate    terraform validate"
-	@echo "  plan        terraform plan"
-	@echo "  ecr         apply ONLY the ECR repo (needed before the first image push)"
-	@echo "  image       build + push the backend container image to ECR"
-	@echo "  deploy      terraform apply (full stack)"
-	@echo "  frontend    build the site with TF outputs, sync to S3, invalidate CDN"
-	@echo "  destroy     terraform destroy -> ~\$$0"
+	@echo "  bootstrap     create remote-state bucket + lock table + CI user (one-time)"
+	@echo "  init          terraform init"
+	@echo "  validate      terraform validate"
+	@echo "  plan          terraform plan"
+	@echo "  deploy        terraform apply (full stack)"
+	@echo "  build-backend build app.zip, publish a SnapStart version, repoint the alias"
+	@echo "  frontend      build the site with TF outputs, sync to S3, invalidate CDN"
+	@echo "  destroy       terraform destroy -> ~\$$0"
 	@echo "  First-time order is documented in DEPLOY.md."
 
 # ---- bootstrap (persistent, local state) ----
@@ -60,14 +58,11 @@ validate:
 plan:
 	@$(TF_ENV) cd $(ENV) && terraform plan
 
-ecr:
-	@$(TF_ENV) cd $(ENV) && terraform apply -target=module.rabbitrole.aws_ecr_repository.backend
-
 deploy:
 	@$(TF_ENV) cd $(ENV) && terraform apply
 
-image:
-	@$(build_push_image)
+build-backend:
+	@$(build_backend_zip)
 
 frontend:
 	@$(build_sync_frontend)
@@ -76,19 +71,20 @@ destroy:
 	@$(TF_ENV) cd $(ENV) && terraform destroy
 
 # ---- reusable recipes ------------------------------------------------------
-# Build the backend image and refresh the Lambda if it exists.
-# NOTE: --provenance=false is required. Without it, buildx attaches a provenance
-# attestation, which makes the pushed artifact a manifest LIST — and Lambda only
-# accepts a single image manifest ("media type ... not supported" otherwise).
-define build_push_image
-	cd $(ENV) && \
-	  REPO=$$(terraform output -raw ecr_repository_url) && \
-	  REGISTRY=$${REPO%%/*} && \
-	  aws ecr get-login-password --region $(REGION) | docker login --username AWS --password-stdin $$REGISTRY && \
-	  docker buildx build --provenance=false --platform linux/amd64 -t $$REPO:latest --push $(ROOT)/backend && \
-	  ( aws lambda update-function-code --region $(REGION) --function-name $(LAMBDA) --image-uri $$REPO:latest >/dev/null 2>&1 \
-	      && echo "Refreshed Lambda $(LAMBDA)" \
-	      || echo "Lambda $(LAMBDA) not created yet — image is in ECR, ready for 'make deploy'." )
+# Build the backend zip (Gradle), upload it to the artifacts bucket, publish a new
+# SnapStart-enabled version, and point the live alias at it. Function name + bucket +
+# alias come from TF outputs, so this works once `make deploy` has created them.
+define build_backend_zip
+	cd $(ROOT)/backend && ./gradlew --no-daemon lambdaZip && \
+	cd $(ROOT)/$(ENV) && \
+	  BUCKET=$$(terraform output -raw artifacts_bucket) && \
+	  FUNC=$$(terraform output -raw lambda_function_name) && \
+	  ALIAS=$$(terraform output -raw lambda_alias) && \
+	  aws s3 cp $(ROOT)/backend/build/dist/app.zip s3://$$BUCKET/backend/app.zip && \
+	  VERSION=$$(aws lambda update-function-code --region $(REGION) --function-name $$FUNC --s3-bucket $$BUCKET --s3-key backend/app.zip --publish --query Version --output text) && \
+	  aws lambda wait published-version-active --region $(REGION) --function-name $$FUNC --qualifier $$VERSION && \
+	  aws lambda update-alias --region $(REGION) --function-name $$FUNC --name $$ALIAS --function-version $$VERSION && \
+	  echo "Deployed backend version $$VERSION to alias $$ALIAS."
 endef
 
 # Build the static site with the env's TF outputs, sync to its frontend bucket,

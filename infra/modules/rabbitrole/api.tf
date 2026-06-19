@@ -1,14 +1,13 @@
-# Backend: ECR image -> Lambda (container) -> API Gateway HTTP API.
+# Backend: zip on the java21 managed runtime + SnapStart -> API Gateway HTTP API.
 # Lambda runs OUTSIDE any VPC and reaches DynamoDB/S3/SSM over AWS's public APIs.
+# Real code is built by Gradle (backend/ -> app.zip) and pushed out-of-band by CI via
+# `aws lambda update-function-code` (from the artifacts bucket) + `publish-version`;
+# Terraform seeds a placeholder so the function/alias create in a single apply.
 
-resource "aws_ecr_repository" "backend" {
-  name         = "${local.name}-backend"
-  force_delete = true # clean `terraform destroy`
-
-  image_scanning_configuration {
-    scan_on_push = true
-  }
-  tags = local.tags
+data "archive_file" "backend_placeholder" {
+  type        = "zip"
+  source_dir  = "${path.module}/lambdas/backend-placeholder"
+  output_path = "${path.module}/build/backend-placeholder.zip"
 }
 
 # --- Lambda execution role -------------------------------------------------
@@ -93,38 +92,65 @@ resource "aws_iam_role_policy" "lambda_runtime" {
   policy = data.aws_iam_policy_document.lambda_runtime.json
 }
 
-# --- Lambda function -------------------------------------------------------
-# Placeholder image until CI pushes the real one (Phase 6). The image tag is
-# updated out-of-band by `lambda update-function-code`, so changes to it here
-# are ignored to avoid TF fighting the deploy pipeline.
+# --- Lambda function (zip, java21 + SnapStart) -----------------------------
+# Seeded from a placeholder zip; CI pushes real code out-of-band via
+# `update-function-code` + `publish-version`, then repoints the `live` alias — so code
+# changes here are ignored. SnapStart applies to PUBLISHED versions, and API Gateway
+# invokes the alias (below) so requests use the restored snapshot, not $LATEST.
 
 resource "aws_lambda_function" "backend" {
   function_name = "${local.name}-backend"
   role          = aws_iam_role.lambda.arn
-  package_type  = "Image"
-  image_uri     = "${aws_ecr_repository.backend.repository_url}:latest"
+  runtime       = "java21"
+  handler       = "com.amazonaws.serverless.proxy.spring.SpringDelegatingLambdaContainerHandler"
+  architectures = ["x86_64"]
+
+  filename         = data.archive_file.backend_placeholder.output_path
+  source_code_hash = data.archive_file.backend_placeholder.output_base64sha256
+  publish          = true
 
   timeout = 30
-  # Lambda CPU scales with memory; Spring Boot cold-starts much faster at 2 GB
-  # (actual heap use is ~210 MB). The extra cost is negligible at portfolio idle.
+  # Lambda CPU scales with memory; 2 GB gives a fast SnapStart restore and headroom
+  # for the analyze call (JSearch + OpenAI). Negligible cost at portfolio idle.
   memory_size = 2048
+
+  # Snapshot the initialized JVM + Spring context so cold starts restore in well under
+  # a second instead of paying Spring Boot's full boot. Free for the Java runtime.
+  snap_start {
+    apply_on = "PublishedVersions"
+  }
 
   environment {
     variables = {
       SPRING_PROFILES_ACTIVE = var.env
-      DYNAMO_TABLE_PREFIX    = local.name
-      RESUMES_BUCKET         = aws_s3_bucket.resumes.id
-      SSM_PREFIX             = "/rabbitrole/${var.env}"
-      COGNITO_ISSUER_URI     = local.cognito_issuer
-      COGNITO_USER_POOL_ID   = aws_cognito_user_pool.main.id
+      # Tells SpringDelegatingLambdaContainerHandler which @SpringBootApplication to boot.
+      MAIN_CLASS           = "com.rabbitrole.RabbitroleApplication"
+      DYNAMO_TABLE_PREFIX  = local.name
+      RESUMES_BUCKET       = aws_s3_bucket.resumes.id
+      SSM_PREFIX           = "/rabbitrole/${var.env}"
+      COGNITO_ISSUER_URI   = local.cognito_issuer
+      COGNITO_USER_POOL_ID = aws_cognito_user_pool.main.id
     }
   }
 
+  # CI owns the deployed code; don't let TF revert to the placeholder on apply.
   lifecycle {
-    ignore_changes = [image_uri]
+    ignore_changes = [filename, source_code_hash]
   }
 
   tags = local.tags
+}
+
+# Stable alias API Gateway points at; CI repoints it to each freshly published,
+# SnapStart-enabled version on deploy.
+resource "aws_lambda_alias" "live" {
+  name             = "live"
+  function_name    = aws_lambda_function.backend.function_name
+  function_version = aws_lambda_function.backend.version
+
+  lifecycle {
+    ignore_changes = [function_version]
+  }
 }
 
 # --- API Gateway (HTTP API) ------------------------------------------------
@@ -140,7 +166,7 @@ resource "aws_apigatewayv2_api" "http" {
 resource "aws_apigatewayv2_integration" "lambda" {
   api_id                 = aws_apigatewayv2_api.http.id
   integration_type       = "AWS_PROXY"
-  integration_uri        = aws_lambda_function.backend.invoke_arn
+  integration_uri        = aws_lambda_alias.live.invoke_arn # alias -> SnapStart'd version
   payload_format_version = "2.0"
 }
 
@@ -163,6 +189,7 @@ resource "aws_lambda_permission" "apigw" {
   statement_id  = "AllowApiGatewayInvoke"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.backend.function_name
+  qualifier     = aws_lambda_alias.live.name # permission applies to the alias
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_apigatewayv2_api.http.execution_arn}/*/*"
 }

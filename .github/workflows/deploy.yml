@@ -1,6 +1,6 @@
-# Deploy on push to main: build + test, provision, push the backend image, apply
-# infra, refresh the Lambda, and ship the frontend. Self-bootstraps ECR so the
-# container Lambda's chicken-and-egg is handled on the first run.
+# Deploy on push to main: build + test, apply infra, build the backend zip and ship a
+# new SnapStart version (repointing the `live` alias), then ship the frontend. The
+# zip Lambda creates in a single apply — no ECR / image chicken-and-egg.
 #
 # Requires the remote-state bootstrap to have been applied once (see DEPLOY.md)
 # and these repo Secrets: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY,
@@ -19,7 +19,6 @@ permissions:
 env:
   AWS_REGION: us-east-1
   TF_DIR: infra/environments/dev
-  LAMBDA: rabbitrole-dev-backend
 
 jobs:
   test:
@@ -64,8 +63,10 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
-      # docker-container builder so --provenance=false --push behaves consistently.
-      - uses: docker/setup-buildx-action@v3
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
 
       - uses: hashicorp/setup-terraform@v3
         with:
@@ -84,37 +85,30 @@ jobs:
           terraform init -input=false \
             -backend-config="bucket=rabbitrole-tfstate-$(aws sts get-caller-identity --query Account --output text)"
 
-      # ECR must exist before we can push the image the Lambda needs.
-      - name: Ensure ECR repository
-        working-directory: ${{ env.TF_DIR }}
-        run: terraform apply -input=false -auto-approve -target=module.rabbitrole.aws_ecr_repository.backend
-
-      - name: Build + push backend image
-        working-directory: ${{ env.TF_DIR }}
-        # --provenance=false: a provenance attestation would make this a manifest
-        # list, which Lambda rejects ("media type ... not supported").
-        run: |
-          REPO=$(terraform output -raw ecr_repository_url)
-          REGISTRY=${REPO%%/*}
-          aws ecr get-login-password --region ${{ env.AWS_REGION }} \
-            | docker login --username AWS --password-stdin "$REGISTRY"
-          docker buildx build --provenance=false --platform linux/amd64 \
-            -t "$REPO:latest" -t "$REPO:${{ github.sha }}" --push "$GITHUB_WORKSPACE/backend"
-
+      # One pass: creates the artifacts bucket + the function (from a placeholder) +
+      # the live alias. No ECR ordering needed.
       - name: Terraform apply
         working-directory: ${{ env.TF_DIR }}
         run: terraform apply -input=false -auto-approve
 
-      # api.tf ignores image_uri (tag is :latest), so apply won't pull the new
-      # digest — refresh the function code explicitly.
-      - name: Refresh Lambda image
+      # Build the zip, upload it, publish a new SnapStart-enabled version, and point
+      # the live alias at it. api.tf ignores the function's code, so this is what
+      # actually ships backend changes.
+      - name: Build + deploy backend (zip)
         working-directory: ${{ env.TF_DIR }}
         run: |
-          REPO=$(terraform output -raw ecr_repository_url)
-          aws lambda update-function-code --region ${{ env.AWS_REGION }} \
-            --function-name ${{ env.LAMBDA }} --image-uri "$REPO:latest" >/dev/null
-          aws lambda wait function-updated --region ${{ env.AWS_REGION }} \
-            --function-name ${{ env.LAMBDA }}
+          (cd "$GITHUB_WORKSPACE/backend" && ./gradlew --no-daemon lambdaZip)
+          BUCKET=$(terraform output -raw artifacts_bucket)
+          FUNC=$(terraform output -raw lambda_function_name)
+          ALIAS=$(terraform output -raw lambda_alias)
+          aws s3 cp "$GITHUB_WORKSPACE/backend/build/dist/app.zip" "s3://$BUCKET/backend/app.zip"
+          VERSION=$(aws lambda update-function-code --region ${{ env.AWS_REGION }} \
+            --function-name "$FUNC" --s3-bucket "$BUCKET" --s3-key backend/app.zip \
+            --publish --query Version --output text)
+          aws lambda wait published-version-active --region ${{ env.AWS_REGION }} \
+            --function-name "$FUNC" --qualifier "$VERSION"
+          aws lambda update-alias --region ${{ env.AWS_REGION }} \
+            --function-name "$FUNC" --name "$ALIAS" --function-version "$VERSION"
 
       - name: Build + deploy frontend
         working-directory: ${{ env.TF_DIR }}

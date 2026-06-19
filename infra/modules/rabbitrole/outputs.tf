@@ -28,9 +28,19 @@ output "resumes_bucket" {
   value       = aws_s3_bucket.resumes.id
 }
 
-output "ecr_repository_url" {
-  description = "ECR repo CI pushes the backend image to."
-  value       = aws_ecr_repository.backend.repository_url
+output "artifacts_bucket" {
+  description = "S3 bucket CI uploads the backend Lambda zip to."
+  value       = aws_s3_bucket.artifacts.id
+}
+
+output "lambda_function_name" {
+  description = "Backend Lambda function name (CI update-function-code / publish target)."
+  value       = aws_lambda_function.backend.function_name
+}
+
+output "lambda_alias" {
+  description = "Backend Lambda alias API Gateway invokes; CI repoints it per deploy."
+  value       = aws_lambda_alias.live.name
 }
 
 output "cognito_user_pool_id" {

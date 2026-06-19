@@ -227,7 +227,7 @@ function Review({
       {roles.length > 1 && (
         <ReviewRow label="Other roles" value={roles.slice(1).join(", ")} />
       )}
-      <ReviewRow label="Work mode" value={remote ? "Remote" : "On-site / local"} />
+      <ReviewRow label="Work model" value={remote ? "Remote" : "On-site / local"} />
       {employmentTypes.length > 0 && (
         <ReviewRow
           label="Employment"

@@ -38,3 +38,19 @@ resource "aws_s3_bucket_public_access_block" "frontend" {
   ignore_public_acls      = true
   restrict_public_buckets = true
 }
+
+# Backend Lambda deployment artifact: CI uploads the Gradle-built app.zip here, then
+# points the function at it via `aws lambda update-function-code`.
+resource "aws_s3_bucket" "artifacts" {
+  bucket        = "${local.name}-artifacts"
+  force_destroy = true
+  tags          = local.tags
+}
+
+resource "aws_s3_bucket_public_access_block" "artifacts" {
+  bucket                  = aws_s3_bucket.artifacts.id
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}

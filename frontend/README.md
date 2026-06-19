@@ -1,36 +1,40 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# frontend — rabbitrole
 
-## Getting Started
+The rabbitrole web app: a **Next.js (App Router) static export** in TypeScript + Tailwind,
+served from S3 + CloudFront (no Node server at runtime). For the conventions (semantic component
+classes, file-based icons, theming) see [`CLAUDE.md`](./CLAUDE.md); for the overall system
+architecture see the repo-root [`CLAUDE.md`](../CLAUDE.md).
 
-First, run the development server:
+## Run locally
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev      # http://localhost:3000
+npm run build    # static export → ./out
+npm run lint     # eslint
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+With no Cognito env vars set, the app runs in **demo mode** — sign-in just routes into the app and
+there's no real auth or bearer token — so you can develop the whole UI without AWS. (You still walk
+through the email-code screen; any code is accepted.)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+The configured (real-auth) build reads these env vars, injected by `make frontend` / CI from the
+Terraform outputs:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- `NEXT_PUBLIC_API_URL` — backend base URL
+- `NEXT_PUBLIC_COGNITO_DOMAIN` — Hosted UI domain
+- `NEXT_PUBLIC_COGNITO_CLIENT_ID` — app client id
+- `NEXT_PUBLIC_COGNITO_REGION` — AWS region
 
-## Learn More
+## Build & deploy
 
-To learn more about Next.js, take a look at the following resources:
+Static export only (`output: "export"`, `images.unoptimized` — see `next.config.ts`). It is **not**
+deployed on Vercel. The production build + S3 sync + CloudFront invalidation are driven from the repo
+root:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+make frontend    # build with live infra outputs, sync to S3, invalidate the CDN
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+CI ships it automatically on push to `main` (`.github/workflows/deploy.yml`). See the repo-root
+[`DEPLOY.md`](../DEPLOY.md) for the full flow.

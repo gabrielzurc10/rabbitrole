@@ -10,7 +10,8 @@ resource "aws_iam_access_key" "ci" {
 }
 
 # Portfolio-scale scope: broad enough to run `terraform apply` for the app
-# stack + push images + sync the site, but bounded to this project's services.
+# stack + ship the backend zip (S3 + Lambda) + sync the site, but bounded to this
+# project's services.
 data "aws_iam_policy_document" "ci" {
   statement {
     sid    = "TerraformState"
@@ -45,7 +46,6 @@ data "aws_iam_policy_document" "ci" {
       "s3:*",
       "cloudfront:*",
       "lambda:*",
-      "ecr:*",
       "apigateway:*",
       "rds:*",
       "rds-data:*",
