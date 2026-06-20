@@ -7,6 +7,7 @@ import { Card, CardBody, CardTitle, CardSubtitle } from "@/components/ui/card";
 import { Icon } from "@/components/ui/icon";
 import { ErrorAlert } from "@/components/ui/alert";
 import { ScoreSummary } from "@/components/ScoreSummary";
+import { ScoreBreakdown } from "@/components/ScoreBreakdown";
 import { TagList } from "@/components/TagList";
 import { ResumeCard } from "@/components/ResumeCard";
 import { ResumeUploader } from "@/components/ResumeUploader";
@@ -195,6 +196,10 @@ function ResumeResult() {
               (analysis ? (
                 <>
                   <ScoreSummary counts={analysis.counts} />
+                  <ScoreBreakdown
+                    subScores={analysis.subScores}
+                    missingSkills={analysis.missingSkills}
+                  />
                   <div>
                     <h2 className="mb-4 text-lg font-semibold tracking-tight">Suggested improvements</h2>
                     <p className="mb-4 text-sm text-muted-foreground">

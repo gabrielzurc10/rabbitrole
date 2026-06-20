@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.rabbitrole.ai.OpenAiClient;
 import com.rabbitrole.analysis.dto.AnalysisResponse;
+import com.rabbitrole.analysis.dto.SubScores;
 import com.rabbitrole.analysis.dto.Tag;
 import com.rabbitrole.analysis.dto.TagCounts;
 import com.rabbitrole.common.ApiException;
@@ -18,6 +19,8 @@ import org.springframework.stereotype.Service;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
+
+import static java.util.Collections.emptyList;
 
 /**
  * Analyzes a resume against a role using Flavor A RAG: pull the role's live
@@ -57,15 +60,19 @@ public class AnalysisService {
         // shouldn't block the critique, it just falls back to general advice.
         List<Job> grounding = safeFetchJobs(role);
 
+        // Scoring is a quality-critical judgment call → use the stronger model.
         String raw = openai.completeJson(
                 AnalysisPrompt.system(),
-                AnalysisPrompt.user(role, resumeText, grounding));
+                AnalysisPrompt.user(role, resumeText, grounding),
+                openai.judgmentModel());
 
         AnalysisEnvelope envelope = parseEnvelope(raw);
         List<Tag> tags = envelope.tags();
-        int score = resolveScore(envelope.score(), tags);
+        int score = resolveScore(envelope.subScores(), tags);
+        List<String> missingSkills = envelope.missingSkills() == null ? emptyList() : envelope.missingSkills();
         Analysis saved = repository.save(new Analysis(
-                UUID.randomUUID().toString(), userId, resumeId, role, tags, score, Instant.now()));
+                UUID.randomUUID().toString(), userId, resumeId, role, tags, score,
+                envelope.subScores(), missingSkills, Instant.now()));
 
         return toResponse(saved);
     }
@@ -108,13 +115,25 @@ public class AnalysisService {
         }
     }
 
+    // Rubric weights — sum to 1.0. Skills + experience dominate fit; impact and
+    // clarity refine it. Tune these (or the prompt) to recalibrate scoring.
+    private static final double W_SKILLS = 0.35;
+    private static final double W_EXPERIENCE = 0.30;
+    private static final double W_IMPACT = 0.20;
+    private static final double W_CLARITY = 0.15;
+
     /**
-     * Trust the model's 0-100 score when it's valid; otherwise derive one from
-     * the tag mix so a response always carries a sensible number.
+     * Overall score = a deterministic weighted blend of the rubric sub-scores (stable
+     * and explainable). Falls back to a tag-mix estimate when sub-scores are missing
+     * or out of range, so a response always carries a sensible number.
      */
-    private int resolveScore(Integer aiScore, List<Tag> tags) {
-        if (aiScore != null && aiScore >= 0 && aiScore <= 100) {
-            return aiScore;
+    private int resolveScore(SubScores s, List<Tag> tags) {
+        if (s != null && s.valid()) {
+            double weighted = W_SKILLS * s.skills()
+                    + W_EXPERIENCE * s.experience()
+                    + W_IMPACT * s.impact()
+                    + W_CLARITY * s.clarity();
+            return (int) Math.round(Math.max(0, Math.min(100, weighted)));
         }
         TagCounts counts = TagCounts.from(tags);
         int derived = 100 - (18 * counts.critical()) - (7 * counts.warning()) - (2 * counts.optional());
@@ -124,10 +143,11 @@ public class AnalysisService {
     private AnalysisResponse toResponse(Analysis a) {
         return new AnalysisResponse(
                 a.id(), a.resumeId(), a.role(), a.score(),
+                a.subScores(), a.missingSkills() == null ? emptyList() : a.missingSkills(),
                 TagCounts.from(a.tags()), a.tags(), a.createdAt());
     }
 
-    /** Matches the {"score":..,"tags":[...]} shape the model is told to return. */
-    private record AnalysisEnvelope(Integer score, List<Tag> tags) {
+    /** Matches the {"subScores":{..},"missingSkills":[..],"tags":[..]} shape the model returns. */
+    private record AnalysisEnvelope(SubScores subScores, List<String> missingSkills, List<Tag> tags) {
     }
 }

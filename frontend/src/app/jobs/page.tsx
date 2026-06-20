@@ -13,6 +13,7 @@ import { JobsSkeleton } from "@/components/Skeleton";
 import { ScrollToTopButton } from "@/components/ScrollToTopButton";
 import {
   getJobsForMe,
+  getTopMatches,
   peekJobs,
   cacheJobs,
   getProfile,
@@ -55,6 +56,8 @@ export default function JobsPage() {
   const [profile, setProfile] = useState<Profile | null>(() =>
     hydrated ? (peekProfile() ?? null) : null,
   );
+  // LLM-reranked "Top matches" block, fetched separately from the lazy feed.
+  const [topMatches, setTopMatches] = useState<Job[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   // The profile points at a resume the backend no longer has (e.g. it was deleted) — show
   // a friendly upload prompt instead of leaking the raw "No resume found for id …" error.
@@ -96,6 +99,15 @@ export default function JobsPage() {
       .then((p) => setProfile(p))
       .catch(() => {}); // a miss isn't fatal — the filter button just stays hidden
   }, [ready, router, jobs, setFirstPage]);
+
+  // Fetch the "Top matches" block once the session is ready. Best-effort: a failure
+  // (or no resume) just hides the block; the feed still renders.
+  useEffect(() => {
+    if (!ready) return;
+    getTopMatches()
+      .then((t) => setTopMatches(t ?? []))
+      .catch(() => setTopMatches([])); // failed → no Top matches, but stop "searching"
+  }, [ready]);
 
   // Infinite scroll: reveal the next 10 from what's already loaded, else fetch the
   // next backend page. Stops once a page comes back empty.
@@ -146,6 +158,7 @@ export default function JobsPage() {
     const previous = profile;
     setApplying(true);
     setError(null);
+    setTopMatches(null); // re-enter the "searching" state while we re-rank for the new filters
     // Optimistically reflect the applied values: the panel re-seeds from `profile` on
     // each (re)mount, so without this, closing and reopening it mid-apply would snap the
     // fields back to the old profile. Rolled back below if the save fails.
@@ -165,6 +178,10 @@ export default function JobsPage() {
       setProfile(saved);
       setFirstPage(fresh ?? []);
       setFilterOpen(false);
+      // Preferences changed → refresh the Top matches too (best-effort).
+      getTopMatches()
+        .then((t) => setTopMatches(t ?? []))
+        .catch(() => setTopMatches([]));
     } catch (e) {
       setProfile(previous); // save failed — undo the optimistic change
       if (isMissingResume(e)) setNeedsResume(true);
@@ -175,6 +192,12 @@ export default function JobsPage() {
   }
 
   const hasMore = Boolean(jobs && (visible < jobs.length || !done));
+  // Don't repeat a posting in the feed if it's already pinned in Top matches.
+  const topIds = new Set((topMatches ?? []).map((j) => j.id));
+  // Hold the whole list back until BOTH the feed and the (slower) Top matches resolve,
+  // so the page reveals everything at once after the searching animation.
+  const loadingResults =
+    !error && !needsResume && (applying || jobs === null || topMatches === null);
 
   return (
     <div className="page">
@@ -256,27 +279,51 @@ export default function JobsPage() {
           </div>
         )}
 
-        {!error && !needsResume && (applying || !jobs) && <JobsSkeleton />}
+        {/* Card skeletons until the feed AND the slower Top-matches resolve. */}
+        {loadingResults && <JobsSkeleton />}
 
-        {!applying && jobs && jobs.length === 0 && (
+        {!loadingResults && jobs && jobs.length === 0 && (
           <div className="mt-12 flex flex-col items-center text-center text-muted-foreground">
             <Icon name="briefcase" className="h-10 w-10" />
             <p className="mt-3">No postings found for your preferences right now.</p>
           </div>
         )}
 
-        {!applying && jobs && jobs.length > 0 && (
+        {!loadingResults && jobs && jobs.length > 0 && (
           <>
-            <div className="mt-6 space-y-3">
-              {jobs.slice(0, visible).map((job, i) => (
-                <div
-                  key={job.id}
-                  className="motion-safe:animate-[slide-up_0.4s_ease-out_both]"
-                  style={{ animationDelay: `${(i % PAGE) * 50}ms` }}
-                >
-                  <JobCard job={job} />
+            {/* Top matches: LLM-reranked best fits with their reason inline. */}
+            {topMatches && topMatches.length > 0 && (
+              <div className="mt-6">
+                <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-primary-strong">
+                  <Icon name="sparkles" className="h-4 w-4" />
+                  Top matches
+                </h2>
+                <div className="space-y-3">
+                  {topMatches.map((job) => (
+                    <JobCard key={`top-${job.id}`} job={job} />
+                  ))}
                 </div>
-              ))}
+              </div>
+            )}
+
+            {topMatches && topMatches.length > 0 && (
+              <h2 className="mt-8 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                All matches
+              </h2>
+            )}
+            <div className="mt-3 space-y-3">
+              {jobs
+                .slice(0, visible)
+                .filter((job) => !topIds.has(job.id))
+                .map((job, i) => (
+                  <div
+                    key={job.id}
+                    className="motion-safe:animate-[slide-up_0.4s_ease-out_both]"
+                    style={{ animationDelay: `${(i % PAGE) * 50}ms` }}
+                  >
+                    <JobCard job={job} />
+                  </div>
+                ))}
             </div>
 
             {/* Sentinel: scrolling it into view triggers the next page. */}

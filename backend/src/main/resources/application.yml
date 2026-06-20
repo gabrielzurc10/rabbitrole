@@ -21,7 +21,11 @@ server:
 openai:
   api-key: ${OPENAI_API_KEY:}
   base-url: https://api.openai.com/v1
+  # Default chat model: cheap, used for high-frequency calls (job "why this match?").
   chat-model: gpt-4o-mini
+  # Stronger model for the low-frequency, quality-critical judgment calls (resume
+  # scoring + job re-rank). Falls back to gpt-4o-mini if the key lacks gpt-4o access.
+  judgment-model: gpt-4o
   embedding-model: text-embedding-3-small
 
 # JSearch (RapidAPI) — live job postings. Key from .env locally, SSM in prod.

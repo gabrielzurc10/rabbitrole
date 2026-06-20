@@ -35,7 +35,8 @@ class JobServiceTest {
     void setUp() {
         client = mock(JSearchClient.class);
         scorer = mock(MatchScorer.class);
-        service = new JobService(client, scorer);
+        // These tests cover fetch/interleave/filter, not re-rank — a mock reranker suffices.
+        service = new JobService(client, scorer, mock(JobRerankService.class));
         // Scorer is identity here — we only care about what gets merged in.
         when(scorer.score(anyString(), anyList())).thenAnswer(inv -> inv.getArgument(1));
     }

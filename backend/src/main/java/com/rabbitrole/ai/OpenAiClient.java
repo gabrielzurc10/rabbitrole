@@ -18,25 +18,38 @@ import java.util.Map;
 public class OpenAiClient {
 
     private final RestClient http;
-    private final String model;
+    private final String chatModel;
+    private final String judgmentModel;
 
     public OpenAiClient(
             @Value("${openai.base-url}") String baseUrl,
             @Value("${openai.api-key}") String apiKey,
-            @Value("${openai.chat-model}") String model) {
-        this.model = model;
+            @Value("${openai.chat-model}") String chatModel,
+            @Value("${openai.judgment-model}") String judgmentModel) {
+        this.chatModel = chatModel;
+        this.judgmentModel = judgmentModel;
         this.http = RestClient.builder()
                 .baseUrl(baseUrl)
                 .defaultHeader("Authorization", "Bearer " + apiKey)
                 .build();
     }
 
+    /** The stronger model name for quality-critical calls (scoring, re-rank). */
+    public String judgmentModel() {
+        return judgmentModel;
+    }
+
+    /** Runs a chat completion on the default chat model. */
+    public String completeJson(String systemPrompt, String userPrompt) {
+        return completeJson(systemPrompt, userPrompt, chatModel);
+    }
+
     /**
-     * Runs a chat completion in JSON mode and returns the raw JSON string the
-     * model produced. Callers own parsing it into their own DTOs.
+     * Runs a chat completion in JSON mode on the given model and returns the raw
+     * JSON string the model produced. Callers own parsing it into their own DTOs.
      */
     @SuppressWarnings("unchecked")
-    public String completeJson(String systemPrompt, String userPrompt) {
+    public String completeJson(String systemPrompt, String userPrompt, String model) {
         Map<String, Object> body = Map.of(
                 "model", model,
                 "temperature", 0.2,

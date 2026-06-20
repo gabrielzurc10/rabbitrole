@@ -68,10 +68,38 @@ dependencies {
 }
 
 tasks.withType<Test> {
-    useJUnitPlatform()
     // The generic Lambda handler resolves the Spring app from MAIN_CLASS; set it so
     // LambdaHandlerTest can exercise the real handler path in-process.
     environment("MAIN_CLASS", "com.rabbitrole.RabbitroleApplication")
+}
+
+// Default test run (CI): offline/mocked only — exclude the real-API eval harness.
+tasks.named<Test>("test") {
+    useJUnitPlatform {
+        excludeTags("eval")
+    }
+}
+
+// Opt-in eval harness: `./gradlew eval` runs ONLY @Tag("eval") tests, which call the
+// real OpenAI API (and grade scoring/matching quality). Runs from the repo root so
+// spring-dotenv loads the root .env (OPENAI_API_KEY); skips itself if the key is absent.
+tasks.register<Test>("eval") {
+    group = "verification"
+    description = "Runs the real-API AI eval harness (@Tag(\"eval\")). Needs OPENAI_API_KEY."
+    testClassesDirs = sourceSets["test"].output.classesDirs
+    classpath = sourceSets["test"].runtimeClasspath
+    useJUnitPlatform {
+        includeTags("eval")
+    }
+    // Load OPENAI_API_KEY from the repo-root .env (same source bootRun uses) into the
+    // test JVM's environment, so the harness can read it via System.getenv. Absent → skips.
+    val dotenv = rootProject.projectDir.parentFile.resolve(".env")
+    if (dotenv.exists()) {
+        Regex("^\\s*OPENAI_API_KEY\\s*=\\s*(.+)$", RegexOption.MULTILINE)
+            .find(dotenv.readText())
+            ?.let { environment("OPENAI_API_KEY", it.groupValues[1].trim()) }
+    }
+    outputs.upToDateWhen { false } // always re-run; it's a live quality check
 }
 
 // Lambda zip (java21 managed runtime): app classes/resources at the root, every

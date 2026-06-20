@@ -16,7 +16,7 @@ import {
   verifyEmailCode,
   isConfigured,
 } from "@/lib/auth";
-import { getProfile, warmUp } from "@/lib/api";
+import { getProfile } from "@/lib/api";
 import { setSigningIn } from "@/lib/signingStatus";
 import { WaveBackground } from "@/components/WaveBackground";
 
@@ -30,12 +30,6 @@ function LoginCard() {
   const [busy, setBusy] = useState(false);
   const [routing, setRouting] = useState(false);
   const handled = useRef(false);
-
-  // Nudge the backend awake the moment the sign-in page loads, so the cold start
-  // overlaps the time the user spends typing — their first real call is warm.
-  useEffect(() => {
-    warmUp();
-  }, []);
 
   // Clicking "Continue with Google" sets busy=true then redirects to the Hosted UI.
   // Pressing Back restores this page from the bfcache with busy still true, leaving

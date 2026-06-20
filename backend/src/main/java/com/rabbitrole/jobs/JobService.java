@@ -28,10 +28,25 @@ public class JobService {
 
     private final JSearchClient client;
     private final MatchScorer scorer;
+    private final JobRerankService reranker;
 
-    public JobService(JSearchClient client, MatchScorer scorer) {
+    public JobService(JSearchClient client, MatchScorer scorer, JobRerankService reranker) {
         this.client = client;
         this.scorer = scorer;
+        this.reranker = reranker;
+    }
+
+    /**
+     * The "Top matches" block: build the first-page candidate pool (interleaved,
+     * deduped, filtered, cosine-scored), then LLM-re-rank to the best {@code n} with
+     * refined scores + reasons. Empty when there's no resume to rank against.
+     */
+    public List<Job> topMatches(Profile profile, String resumeText, int n) {
+        if (resumeText == null || resumeText.isBlank()) {
+            return List.of();
+        }
+        List<Job> pool = forProfile(profile, resumeText, 0);
+        return reranker.topMatches(resumeText, pool, n);
     }
 
     /** Postings for a role, unscored. */

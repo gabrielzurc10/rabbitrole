@@ -25,7 +25,9 @@ final class AnalysisPrompt {
             You are an expert resume reviewer. Critique the resume for the TARGET ROLE,
             using the provided postings only as a guide to what the role GENERALLY demands.
             Return STRICT JSON:
-            {"score": <int 0-100>, "tags":[{"severity","message","reason","suggestion","location"}]}
+            {"subScores":{"skills":<0-100>,"experience":<0-100>,"impact":<0-100>,"clarity":<0-100>},
+             "missingSkills":[<string>],
+             "tags":[{"severity","message","reason","suggestion","location"}]}
 
             Judge the resume against the CORE, transferable competencies of the role — the
             skills, tools, and qualifications common to MOST postings for it. The postings
@@ -39,9 +41,14 @@ final class AnalysisPrompt {
             Flag a missing skill ONLY if it is genuinely standard for this role across the
             board — never penalize a candidate for not matching a narrow specialty.
 
-            - score: a holistic 0-100 rating of fit for the role's CORE expectations
-              (100 = exceptional, 0 = no fit). Be discerning, but do not dock points for
-              missing niche specializations.
+            - subScores: rate each dimension 0-100 for fit to the role's CORE expectations
+              (100 = exceptional, 0 = no fit). Be discerning but don't dock for niche gaps:
+              - skills: coverage of the core skills/tools the role demands.
+              - experience: relevance and seniority of the work history for the role.
+              - impact: use of quantified outcomes (numbers, scale, results) vs vague duties.
+              - clarity: structure, concision, and ATS-friendly formatting/wording.
+            - missingSkills: up to 6 concrete skills/tools that are STANDARD for this role
+              and absent or weak in the resume. Omit niche specialties. [] if none.
             - severity is one of: CRITICAL, WARNING, OPTIONAL.
             - CRITICAL: likely to get the resume rejected. WARNING: notably weakens it.
               OPTIONAL: nice-to-have polish.

@@ -3,6 +3,7 @@ package com.rabbitrole.analysis;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.json.JsonMapper;
+import com.rabbitrole.analysis.dto.SubScores;
 import com.rabbitrole.analysis.dto.Tag;
 import com.rabbitrole.common.ApiException;
 import com.rabbitrole.persistence.Dynamo;
@@ -47,6 +48,12 @@ public class DynamoAnalysisRepository implements AnalysisRepository {
         Dynamo.putS(item, "role", analysis.role());
         Dynamo.putS(item, "tags", writeTags(analysis.tags()));
         Dynamo.putN(item, "score", analysis.score());
+        if (analysis.subScores() != null) {
+            Dynamo.putS(item, "sub_scores", writeJson(analysis.subScores()));
+        }
+        if (analysis.missingSkills() != null && !analysis.missingSkills().isEmpty()) {
+            Dynamo.putS(item, "missing_skills", writeJson(analysis.missingSkills()));
+        }
         Dynamo.putS(item, "created_at", analysis.createdAt().toString());
         db.put(TABLE, item);
         return analysis;
@@ -63,6 +70,9 @@ public class DynamoAnalysisRepository implements AnalysisRepository {
                     Dynamo.getS(item, "role"),
                     readTags(Dynamo.getS(item, "tags")),
                     score == null ? 0 : score,
+                    // Null/empty for analyses saved before the rubric was added.
+                    readSubScores(Dynamo.getS(item, "sub_scores")),
+                    readStrings(Dynamo.getS(item, "missing_skills")),
                     Instant.parse(Dynamo.getS(item, "created_at")));
         });
     }
@@ -99,6 +109,39 @@ public class DynamoAnalysisRepository implements AnalysisRepository {
         } catch (Exception e) {
             throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR,
                     "Could not read analysis tags: " + e.getMessage());
+        }
+    }
+
+    private String writeJson(Object value) {
+        try {
+            return json.writeValueAsString(value);
+        } catch (Exception e) {
+            throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Could not serialize analysis field: " + e.getMessage());
+        }
+    }
+
+    /** Null for pre-rubric records (the attribute is absent). */
+    private SubScores readSubScores(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return null;
+        }
+        try {
+            return json.readValue(raw, SubScores.class);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /** Empty for pre-rubric records (the attribute is absent). */
+    private List<String> readStrings(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return List.of();
+        }
+        try {
+            return json.readValue(raw, new TypeReference<List<String>>() {});
+        } catch (Exception e) {
+            return List.of();
         }
     }
 }
