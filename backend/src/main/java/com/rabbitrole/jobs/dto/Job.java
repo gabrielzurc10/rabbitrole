@@ -37,12 +37,34 @@ public record Job(
         Double salaryMax,
         String salaryPeriod,
         String salaryCurrency,
-        Integer matchPercent) {
+        Integer matchPercent,
+        String reason) {
 
-    /** Returns a copy of this posting with its resume match score set. */
+    /**
+     * Backward-compatible constructor without {@code reason} (null) — used by the
+     * JSearch mapping and tests, which never set a re-rank reason. {@code reason} is
+     * populated only for the LLM-reranked "Top matches".
+     */
+    public Job(String id, String title, String company, String employerLogo, String location,
+               String city, String state, String workMode, String employmentType, String description,
+               String url, String postedAt, String publisher, Double salaryMin, Double salaryMax,
+               String salaryPeriod, String salaryCurrency, Integer matchPercent) {
+        this(id, title, company, employerLogo, location, city, state, workMode, employmentType,
+                description, url, postedAt, publisher, salaryMin, salaryMax, salaryPeriod,
+                salaryCurrency, matchPercent, null);
+    }
+
+    /** Returns a copy of this posting with its resume match score set (reason preserved). */
     public Job withMatch(int matchPercent) {
         return new Job(id, title, company, employerLogo, location, city, state, workMode,
                 employmentType, description, url, postedAt, publisher, salaryMin, salaryMax,
-                salaryPeriod, salaryCurrency, matchPercent);
+                salaryPeriod, salaryCurrency, matchPercent, reason);
+    }
+
+    /** Returns a copy with a re-rank-refined score + the "why this match" reason. */
+    public Job withRerank(int matchPercent, String reason) {
+        return new Job(id, title, company, employerLogo, location, city, state, workMode,
+                employmentType, description, url, postedAt, publisher, salaryMin, salaryMax,
+                salaryPeriod, salaryCurrency, matchPercent, reason);
     }
 }

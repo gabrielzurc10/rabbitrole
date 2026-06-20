@@ -27,6 +27,9 @@ import java.util.List;
 @RequestMapping("/api/jobs")
 public class JobController {
 
+    /** How many postings the "Top matches" block surfaces. */
+    private static final int TOP_MATCHES = 5;
+
     private final JobService jobs;
     private final ResumeService resumes;
     private final ProfileService profiles;
@@ -69,6 +72,24 @@ public class JobController {
                 : resumes.extractedText(profile.resumeId(), userId);
         // page is 0-based; an out-of-range page just yields an empty list ("no more").
         return ResponseEntity.ok(jobs.forProfile(profile, resumeText, Math.max(0, page)));
+    }
+
+    /**
+     * The LLM-reranked "Top matches" block, pinned above the lazy feed. Returns the
+     * best few postings with a refined score + an inline reason. 204 when there's no
+     * profile; an empty list when there's no resume to rank against.
+     */
+    @GetMapping("/me/top")
+    public ResponseEntity<List<Job>> topForMe() {
+        String userId = currentUser.id();
+        Profile profile = profiles.find(userId).orElse(null);
+        if (profile == null) {
+            return ResponseEntity.noContent().build();
+        }
+        String resumeText = profile.resumeId() == null
+                ? null
+                : resumes.extractedText(profile.resumeId(), userId);
+        return ResponseEntity.ok(jobs.topMatches(profile, resumeText, TOP_MATCHES));
     }
 
     /**

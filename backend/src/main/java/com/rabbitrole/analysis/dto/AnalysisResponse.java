@@ -9,6 +9,8 @@ public record AnalysisResponse(
         String resumeId,
         String role,
         int score,
+        SubScores subScores,
+        List<String> missingSkills,
         TagCounts counts,
         List<Tag> tags,
         Instant createdAt) {

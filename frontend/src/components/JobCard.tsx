@@ -71,8 +71,11 @@ function formatPosted(iso: string | null): string | null {
 }
 
 export function JobCard({ job }: { job: Job }) {
+  // All cards start collapsed. Top matches arrive with a re-rank reason already
+  // attached, so we seed it — expanding then shows it instantly with no fetch. Feed
+  // cards (no reason) fetch on demand the first time they're expanded.
   const [expanded, setExpanded] = useState(false);
-  const [reasoning, setReasoning] = useState<string | null>(null);
+  const [reasoning, setReasoning] = useState<string | null>(job.reason ?? null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

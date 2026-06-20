@@ -17,11 +17,23 @@ export interface TagCounts {
   optional: number;
 }
 
+/** Per-dimension rubric scores (0–100); the overall `score` is a weighted blend. */
+export interface SubScores {
+  skills: number;
+  experience: number;
+  impact: number;
+  clarity: number;
+}
+
 export interface Analysis {
   id: string;
   resumeId: string;
   role: string;
   score: number;
+  /** Rubric breakdown; null for analyses saved before the rubric was added. */
+  subScores: SubScores | null;
+  /** Core skills the role expects that are absent/weak in the resume. */
+  missingSkills: string[];
   counts: TagCounts;
   tags: Tag[];
   createdAt: string;
@@ -76,6 +88,8 @@ export interface Job {
   /** ISO currency code (e.g. "USD"); null when absent. */
   salaryCurrency: string | null;
   matchPercent: number | null;
+  /** "Why this match" reason, present only on LLM-reranked Top matches. */
+  reason?: string | null;
 }
 
 /** On-demand "why this match?" explanation for a posting. */

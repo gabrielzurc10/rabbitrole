@@ -57,7 +57,7 @@ function normalizeTag(raw: Tag): Tag {
 }
 
 function normalizeAnalysis(raw: Analysis): Analysis {
-  return { ...raw, tags: raw.tags.map(normalizeTag) };
+  return { ...raw, tags: raw.tags.map(normalizeTag), missingSkills: raw.missingSkills ?? [] };
 }
 
 export async function uploadResume(file: File): Promise<ResumeUpload> {
@@ -306,6 +306,16 @@ export async function saveProfile(profile: Profile): Promise<Profile> {
 export async function getJobsForMe(page = 0): Promise<Job[] | null> {
   const jobs = await request<Job[] | undefined>(`/api/jobs/me?page=${page}`);
   setOnboarded(!!jobs);
+  return jobs ?? null;
+}
+
+/**
+ * The LLM-reranked "Top matches" block (best few postings with an inline reason),
+ * shown above the lazy feed. Returns [] when there's no resume to rank against, null
+ * when the user has no profile yet (204).
+ */
+export async function getTopMatches(): Promise<Job[] | null> {
+  const jobs = await request<Job[] | undefined>("/api/jobs/me/top");
   return jobs ?? null;
 }
 
