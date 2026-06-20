@@ -4,10 +4,7 @@ import com.rabbitrole.common.ApiException;
 import com.rabbitrole.resume.dto.ResumeFile;
 import com.rabbitrole.resume.dto.ResumeResponse;
 import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
-import java.util.List;
 import java.util.UUID;
 
 /**
@@ -33,14 +30,15 @@ public class ResumeService {
         this.repository = repository;
     }
 
-    public ResumeResponse upload(MultipartFile file, String userId) {
-        if (file == null || file.isEmpty()) {
+    /**
+     * Stores an uploaded resume from its raw bytes. The file arrives as a binary
+     * request body (not multipart/form-data) because the Lambda serverless
+     * container doesn't parse multipart parts — see {@link ResumeController}.
+     */
+    public ResumeResponse upload(byte[] bytes, String filename, String contentType, String userId) {
+        if (bytes == null || bytes.length == 0) {
             throw ApiException.badRequest("No resume file was provided.");
         }
-
-        byte[] bytes = readBytes(file);
-        String filename = file.getOriginalFilename();
-        String contentType = file.getContentType();
 
         String text = extractor.extract(filename, contentType, bytes);
         if (text.isBlank()) {
@@ -110,14 +108,6 @@ public class ResumeService {
             throw ApiException.notFound("No resume found for id " + id);
         }
         return resume;
-    }
-
-    private byte[] readBytes(MultipartFile file) {
-        try {
-            return file.getBytes();
-        } catch (IOException e) {
-            throw ApiException.badRequest("Could not read the uploaded file.");
-        }
     }
 
     private ResumeResponse toResponse(Resume resume) {

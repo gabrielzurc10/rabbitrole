@@ -1,5 +1,7 @@
 package com.rabbitrole.common;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -11,8 +13,15 @@ import org.springframework.web.multipart.MaxUploadSizeExceededException;
 @RestControllerAdvice
 public class ApiExceptionHandler {
 
+    private static final Logger log = LoggerFactory.getLogger(ApiExceptionHandler.class);
+
     @ExceptionHandler(ApiException.class)
     public ResponseEntity<ApiError> handleApi(ApiException ex) {
+        // 5xx ApiExceptions are server-side faults (e.g. an upstream OpenAI/AWS
+        // failure) — log the cause so they're diagnosable in CloudWatch.
+        if (ex.status().is5xxServerError()) {
+            log.error("Server-side ApiException ({}): {}", ex.status(), ex.getMessage(), ex);
+        }
         return build(ex.status(), ex.getMessage());
     }
 
@@ -32,6 +41,10 @@ public class ApiExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiError> handleUnexpected(Exception ex) {
+        // The catch-all: anything not modelled as an ApiException is an unexpected
+        // server fault. Log the full stack trace — without this the 500 is opaque
+        // in CloudWatch (the response body only carries a short message).
+        log.error("Unhandled exception", ex);
         return build(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
     }
 

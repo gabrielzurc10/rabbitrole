@@ -12,11 +12,14 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.multipart.MultipartFile;
+
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 
 /** Upload a resume (PDF/.docx), read back the extracted text, or fetch the file. */
 @RestController
@@ -31,10 +34,28 @@ public class ResumeController {
         this.currentUser = currentUser;
     }
 
+    /**
+     * Uploads a resume as a raw binary body (not multipart/form-data): the Lambda
+     * serverless container doesn't parse multipart parts, so {@code MultipartFile}
+     * is always empty there. The client sends the file bytes directly with its
+     * media type in {@code Content-Type} and the original name in {@code X-Filename}
+     * (URL-encoded, since HTTP headers are ASCII-only).
+     */
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public ResumeResponse upload(@RequestParam("file") MultipartFile file) {
-        return service.upload(file, currentUser.id());
+    public ResumeResponse upload(
+            @RequestBody byte[] body,
+            @RequestHeader(value = "X-Filename", required = false) String filename,
+            @RequestHeader(value = HttpHeaders.CONTENT_TYPE, required = false) String contentType) {
+        return service.upload(body, decodeFilename(filename), contentType, currentUser.id());
+    }
+
+    /** X-Filename is URL-encoded by the client; turn it back into the real name. */
+    private static String decodeFilename(String filename) {
+        if (filename == null || filename.isBlank()) {
+            return null;
+        }
+        return URLDecoder.decode(filename, StandardCharsets.UTF_8);
     }
 
     @GetMapping("/{id}")

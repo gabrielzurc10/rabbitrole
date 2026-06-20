@@ -5,7 +5,6 @@ import com.rabbitrole.resume.dto.ResumeFile;
 import com.rabbitrole.resume.dto.ResumeResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.mock.web.MockMultipartFile;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -32,10 +31,8 @@ class ResumeServiceTest {
 
     @Test
     void uploadExtractsTextAndIsRetrievable() {
-        MockMultipartFile file = new MockMultipartFile(
-                "file", "resume.pdf", "application/pdf", "%PDF-1.4 fake".getBytes());
-
-        ResumeResponse uploaded = service.upload(file, "user-1");
+        ResumeResponse uploaded = service.upload(
+                "%PDF-1.4 fake".getBytes(), "resume.pdf", "application/pdf", "user-1");
 
         assertThat(uploaded.id()).isNotBlank();
         assertThat(uploaded.filename()).isEqualTo("resume.pdf");
@@ -49,9 +46,7 @@ class ResumeServiceTest {
     @Test
     void downloadReturnsTheStoredBytes() {
         byte[] content = "%PDF-1.4 fake".getBytes();
-        MockMultipartFile file = new MockMultipartFile(
-                "file", "resume.pdf", "application/pdf", content);
-        ResumeResponse uploaded = service.upload(file, "user-1");
+        ResumeResponse uploaded = service.upload(content, "resume.pdf", "application/pdf", "user-1");
 
         ResumeFile download = service.download(uploaded.id(), "user-1");
         assertThat(download.filename()).isEqualTo("resume.pdf");
@@ -61,10 +56,7 @@ class ResumeServiceTest {
 
     @Test
     void emptyFileIsRejected() {
-        MockMultipartFile empty = new MockMultipartFile(
-                "file", "resume.pdf", "application/pdf", new byte[0]);
-
-        assertThatThrownBy(() -> service.upload(empty, "user-1"))
+        assertThatThrownBy(() -> service.upload(new byte[0], "resume.pdf", "application/pdf", "user-1"))
                 .isInstanceOf(ApiException.class)
                 .hasMessageContaining("No resume file");
     }
@@ -78,9 +70,8 @@ class ResumeServiceTest {
 
     @Test
     void anotherUsersResumeIsNotFound() {
-        MockMultipartFile file = new MockMultipartFile(
-                "file", "resume.pdf", "application/pdf", "%PDF-1.4 fake".getBytes());
-        ResumeResponse uploaded = service.upload(file, "owner");
+        ResumeResponse uploaded = service.upload(
+                "%PDF-1.4 fake".getBytes(), "resume.pdf", "application/pdf", "owner");
 
         // A different user must not be able to read it — reported as not-found.
         assertThatThrownBy(() -> service.get(uploaded.id(), "intruder"))

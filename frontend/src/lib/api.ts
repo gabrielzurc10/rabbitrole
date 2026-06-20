@@ -61,9 +61,19 @@ function normalizeAnalysis(raw: Analysis): Analysis {
 }
 
 export async function uploadResume(file: File): Promise<ResumeUpload> {
-  const form = new FormData();
-  form.append("file", file);
-  return request<ResumeUpload>("/api/resumes", { method: "POST", body: form });
+  // Sent as a raw binary body, NOT multipart/form-data: the backend runs in a
+  // Lambda serverless container that doesn't parse multipart parts, so a
+  // FormData upload arrives empty there. The file bytes go straight in the body,
+  // with the media type in Content-Type and the original name in X-Filename
+  // (URL-encoded, since HTTP headers must be ASCII).
+  return request<ResumeUpload>("/api/resumes", {
+    method: "POST",
+    body: file,
+    headers: {
+      "Content-Type": file.type || "application/octet-stream",
+      "X-Filename": encodeURIComponent(file.name),
+    },
+  });
 }
 
 /** Resume metadata (filename/filetype), cached by id so tab switches don't refetch. */
