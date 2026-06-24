@@ -57,7 +57,7 @@ export function Footer() {
           <div>
             <Link href="/" className="brand">
               {/* eslint-disable-next-line @next/next/no-img-element -- static export, unoptimized */}
-              <img src="/icons/rabbitrole.png" alt="" className="h-8 w-auto" />
+              <img src="/icons/rabbitrole.png" alt="" className="h-6 w-auto" />
               <span>
                 rabbit<span className="gradient-text">role</span>
               </span>

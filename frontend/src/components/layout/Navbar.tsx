@@ -6,11 +6,17 @@ import { usePathname } from "next/navigation";
 import { AuthButton } from "@/components/layout/AuthButton";
 import { NavTabs } from "@/components/layout/NavTabs";
 import { isSigningIn, subscribeSigningIn } from "@/lib/signingStatus";
+import { isAuthenticated } from "@/lib/auth";
 import { cn } from "@/lib/cn";
+
+// localStorage isn't reactive; re-read auth on each route change (usePathname), the
+// same approach as AuthButton — auth state only flips alongside a navigation.
+const noopSubscribe = () => () => {};
 
 export function Navbar() {
   const pathname = usePathname();
   const signingIn = useSyncExternalStore(subscribeSigningIn, isSigningIn, () => false);
+  const signedIn = useSyncExternalStore(noopSubscribe, isAuthenticated, () => false);
   // Minimal header (no tabs/controls) on the focused sign-in + analyze pages.
   const minimal = pathname.startsWith("/login") || pathname.startsWith("/analyzing");
   // Brand is non-clickable only while a transient step is *running* — the analyze
@@ -22,18 +28,30 @@ export function Navbar() {
       <div className="navbar-inner">
         {lockBrand ? (
           // Same mark, but a plain span — no link, no hover hop — so it does nothing.
-          <span className={cn("brand justify-self-start select-none", !minimal && "max-sm:hidden")}>
+          <span className="brand justify-self-start select-none">
             {/* eslint-disable-next-line @next/next/no-img-element -- static export, unoptimized */}
-            <img src="/icons/rabbitrole.png" alt="" className="h-8 w-auto" />
-            <span>
+            <img
+              src="/icons/rabbitrole.png"
+              alt=""
+              className={cn("h-6 w-auto", signedIn && !minimal && "max-sm:hidden")}
+            />
+            {/* When signed in, the brand collapses on mobile to free room for the centered
+                tabs; signed out (e.g. landing) there are no tabs, so it stays full. */}
+            <span className={cn(signedIn && !minimal && "max-sm:hidden")}>
               rabbit<span className="gradient-text">role</span>
             </span>
           </span>
         ) : (
-          <Link href="/" className={cn("brand justify-self-start", !minimal && "max-sm:hidden")}>
+          <Link href="/" className="brand justify-self-start">
             {/* eslint-disable-next-line @next/next/no-img-element -- static export, unoptimized */}
-            <img src="/icons/rabbitrole.png" alt="" className="h-8 w-auto" />
-            <span>
+            <img
+              src="/icons/rabbitrole.png"
+              alt=""
+              className={cn("h-6 w-auto", signedIn && !minimal && "max-sm:hidden")}
+            />
+            {/* When signed in, the brand collapses on mobile to free room for the centered
+                tabs; signed out (e.g. landing) there are no tabs, so it stays full. */}
+            <span className={cn(signedIn && !minimal && "max-sm:hidden")}>
               rabbit<span className="gradient-text">role</span>
             </span>
           </Link>
