@@ -11,7 +11,14 @@ import type {
   Tag,
 } from "@/types";
 import { getValidAccessToken } from "@/lib/auth";
-import { setOnboarded, PROFILE_CACHE_KEY, JOBS_CACHE_KEY, RESUME_CACHE_KEY } from "@/lib/session";
+import {
+  setOnboarded,
+  PROFILE_CACHE_KEY,
+  JOBS_CACHE_KEY,
+  TOP_MATCHES_CACHE_KEY,
+  RESUME_CACHE_KEY,
+  ANALYSIS_CACHE_KEY,
+} from "@/lib/session";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 
@@ -123,7 +130,14 @@ export async function analyzeResume(resumeId: string, role: string): Promise<Ana
 }
 
 export async function getAnalysis(id: string): Promise<Analysis> {
-  return normalizeAnalysis(await request<Analysis>(`/api/analyses/${id}`));
+  const store = analysisStore();
+  if (store[id]) return store[id]; // immutable per id → safe to reuse across tab switches
+  const analysis = normalizeAnalysis(await request<Analysis>(`/api/analyses/${id}`));
+  store[id] = analysis;
+  if (typeof window !== "undefined") {
+    window.sessionStorage.setItem(ANALYSIS_CACHE_KEY, JSON.stringify(store));
+  }
+  return analysis;
 }
 
 export async function getJobs(role: string, resumeId?: string): Promise<Job[]> {
@@ -214,6 +228,36 @@ export function peekJobs(): JobsPage | null | undefined {
   return jobsCache;
 }
 
+// Top-matches cache — the LLM-reranked block is expensive, so cache it across tab
+// switches just like the feed. Invalidated alongside the jobs cache whenever
+// preferences change (see saveProfile), since a re-rank then goes stale too.
+let topMatchesCache: Job[] | undefined;
+
+function readStoredTopMatches(): Job[] | undefined {
+  if (typeof window === "undefined") return undefined;
+  const raw = window.sessionStorage.getItem(TOP_MATCHES_CACHE_KEY);
+  if (raw === null) return undefined;
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? (parsed as Job[]) : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function setTopMatchesCache(value: Job[] | undefined): void {
+  topMatchesCache = value;
+  if (typeof window === "undefined") return;
+  if (value === undefined) window.sessionStorage.removeItem(TOP_MATCHES_CACHE_KEY);
+  else window.sessionStorage.setItem(TOP_MATCHES_CACHE_KEY, JSON.stringify(value));
+}
+
+/** Synchronous peek so the Jobs page can seed Top matches without re-ranking. */
+export function peekTopMatches(): Job[] | undefined {
+  if (topMatchesCache === undefined) topMatchesCache = readStoredTopMatches();
+  return topMatchesCache;
+}
+
 // Resume metadata cache (filename/filetype) keyed by id. A resume id is immutable,
 // so this never needs invalidating — a new upload is a new id (cache miss).
 let resumeCache: Record<string, ResumeUpload> | undefined;
@@ -233,6 +277,28 @@ function resumeStore(): Record<string, ResumeUpload> {
 /** Synchronous peek of cached resume metadata, for seeding without a loading flash. */
 export function peekResume(id: string): ResumeUpload | undefined {
   return resumeStore()[id];
+}
+
+// Analysis cache keyed by id. An analysis id is immutable (a re-analyze produces a new
+// id, i.e. a cache miss), so like the resume cache this never needs invalidating — it
+// lets the Resume tab restore its review across switches with no refetch or flash.
+let analysisCache: Record<string, Analysis> | undefined;
+
+function analysisStore(): Record<string, Analysis> {
+  if (analysisCache !== undefined) return analysisCache;
+  if (typeof window === "undefined") return (analysisCache = {});
+  const raw = window.sessionStorage.getItem(ANALYSIS_CACHE_KEY);
+  try {
+    analysisCache = raw ? (JSON.parse(raw) as Record<string, Analysis>) : {};
+  } catch {
+    analysisCache = {};
+  }
+  return analysisCache;
+}
+
+/** Synchronous peek of a cached analysis, for seeding without a skeleton flash. */
+export function peekAnalysis(id: string): Analysis | undefined {
+  return analysisStore()[id];
 }
 
 // --- profile + account -----------------------------------------------------
@@ -303,6 +369,7 @@ export async function saveProfile(profile: Profile): Promise<Profile> {
   );
   setProfileCache(saved); // keep the cache fresh so a tab switch (or the /analyzing → /profile hop) shows the new data
   setJobsCache(undefined); // preferences changed → matched jobs are now stale
+  setTopMatchesCache(undefined); // …and so is the LLM re-rank
   setOnboarded(true); // a saved profile means onboarding is complete
   return saved;
 }
@@ -325,7 +392,10 @@ export async function getJobsForMe(page = 0): Promise<Job[] | null> {
  * when the user has no profile yet (204).
  */
 export async function getTopMatches(): Promise<Job[] | null> {
+  if (topMatchesCache === undefined) topMatchesCache = readStoredTopMatches();
+  if (topMatchesCache !== undefined) return topMatchesCache; // cached this session
   const jobs = await request<Job[] | undefined>("/api/jobs/me/top");
+  if (jobs !== undefined) setTopMatchesCache(jobs); // cache real results (incl. []), not a 204
   return jobs ?? null;
 }
 
@@ -354,6 +424,8 @@ export async function deleteAccount(): Promise<void> {
   await request<void>("/api/account", { method: "DELETE" });
   setProfileCache(undefined);
   setJobsCache(undefined);
+  setTopMatchesCache(undefined);
   resumeCache = undefined; // sign-out also clears RESUME_CACHE_KEY via setOnboarded(false)
+  analysisCache = undefined; // …and ANALYSIS_CACHE_KEY likewise
   setOnboarded(false);
 }

@@ -48,8 +48,14 @@ public class Dynamo {
 
     public Optional<Map<String, AttributeValue>> get(String table, String keyName, String keyValue) {
         String t = table(table);
+        // Strongly consistent: these single-item gets often run right after a write in the
+        // same flow (e.g. save preferences → immediately match jobs against them). An
+        // eventually-consistent read can return the pre-write item, so a just-applied
+        // filter would match against the OLD profile. A single-item consistent read is
+        // cheap (~2x RCU on a tiny item) and the tables are always warm / VPC-less.
         Map<String, AttributeValue> item = client.getItem(b -> b
                 .tableName(t)
+                .consistentRead(true)
                 .key(Map.of(keyName, s(keyValue)))).item();
         return item == null || item.isEmpty() ? Optional.empty() : Optional.of(item);
     }

@@ -14,10 +14,16 @@ export function Skeleton({ className }: { className?: string }) {
  * Loading state for the Jobs page — mirrors <JobCard />: a main column (logo +
  * title/company, meta row, actions) beside the gradient match panel with its ring.
  */
-export function JobsSkeleton() {
+export function JobsSkeleton({
+  count = 4,
+  className = "mt-6 space-y-3",
+}: {
+  count?: number;
+  className?: string;
+}) {
   return (
-    <div className="mt-6 space-y-3">
-      {Array.from({ length: 4 }).map((_, i) => (
+    <div className={className}>
+      {Array.from({ length: count }).map((_, i) => (
         <div key={i} className="job-card">
           <div className="job-card-main">
             {/* Header: logo + title + company */}

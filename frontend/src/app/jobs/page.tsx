@@ -18,6 +18,7 @@ import {
   cacheJobs,
   getProfile,
   peekProfile,
+  peekTopMatches,
   saveProfile,
   ApiError,
 } from "@/lib/api";
@@ -56,8 +57,11 @@ export default function JobsPage() {
   const [profile, setProfile] = useState<Profile | null>(() =>
     hydrated ? (peekProfile() ?? null) : null,
   );
-  // LLM-reranked "Top matches" block, fetched separately from the lazy feed.
-  const [topMatches, setTopMatches] = useState<Job[] | null>(null);
+  // LLM-reranked "Top matches" block, fetched separately from the lazy feed. Seeded
+  // from the cache (past hydration) so a tab switch restores it without re-ranking.
+  const [topMatches, setTopMatches] = useState<Job[] | null>(() =>
+    hydrated ? (peekTopMatches() ?? null) : null,
+  );
   const [error, setError] = useState<string | null>(null);
   // The profile points at a resume the backend no longer has (e.g. it was deleted) — show
   // a friendly upload prompt instead of leaking the raw "No resume found for id …" error.
@@ -104,6 +108,11 @@ export default function JobsPage() {
   // (or no resume) just hides the block; the feed still renders.
   useEffect(() => {
     if (!ready) return;
+    // getTopMatches() returns the cached ranking (wrapped in a promise) when warm, else
+    // fetches — so this one call covers both a warm cache (e.g. a full reload, where the
+    // initial state couldn't read it pre-hydration) and a cold fetch. Deliberately keyed
+    // only on `ready`: it must NOT re-run when handleApply nulls `topMatches` to show the
+    // loading state, or it'd refill from the (now stale) cache before the new ranking lands.
     getTopMatches()
       .then((t) => setTopMatches(t ?? []))
       .catch(() => setTopMatches([])); // failed → no Top matches, but stop "searching"
@@ -140,6 +149,18 @@ export default function JobsPage() {
     }
   }, [jobs, visible, done, nextPage, loadingMore]);
 
+  const hasMore = Boolean(jobs && (visible < jobs.length || !done));
+  // The feed and the (slower, LLM-reranked) Top matches load independently, so the list
+  // shows as soon as the feed is ready instead of waiting on the re-rank. Each gets its
+  // own skeleton; a filter apply re-loads both, hence `applying` gates both.
+  const feedLoading = !error && !needsResume && (applying || jobs === null);
+  const topLoading = !error && !needsResume && (applying || topMatches === null);
+
+  // Re-attach the infinite-scroll observer whenever the sentinel's presence can change.
+  // The sentinel only renders once `feedLoading` clears (it lives in the feed block), and
+  // `loadMore`'s identity doesn't change when the feed flips ready — so without
+  // `hasMore`/`feedLoading` here the effect wouldn't re-run to observe the sentinel when
+  // it appears, and load-more would stay dead until a remount (tab switch).
   useEffect(() => {
     const node = sentinelRef.current;
     if (!node) return;
@@ -151,7 +172,7 @@ export default function JobsPage() {
     );
     observer.observe(node);
     return () => observer.disconnect();
-  }, [loadMore]);
+  }, [loadMore, hasMore, feedLoading]);
 
   // Persist the adjusted preferences, then re-fetch matches from page 0.
   async function handleApply(updated: Profile) {
@@ -191,13 +212,8 @@ export default function JobsPage() {
     }
   }
 
-  const hasMore = Boolean(jobs && (visible < jobs.length || !done));
   // Don't repeat a posting in the feed if it's already pinned in Top matches.
   const topIds = new Set((topMatches ?? []).map((j) => j.id));
-  // Hold the whole list back until BOTH the feed and the (slower) Top matches resolve,
-  // so the page reveals everything at once after the searching animation.
-  const loadingResults =
-    !error && !needsResume && (applying || jobs === null || topMatches === null);
 
   return (
     <div className="page">
@@ -279,38 +295,58 @@ export default function JobsPage() {
           </div>
         )}
 
-        {/* Card skeletons until the feed AND the slower Top-matches resolve. */}
-        {loadingResults && <JobsSkeleton />}
+        {/* Top matches: LLM-reranked best fits with their reason inline. Loads
+            independently of the feed (its own skeleton), so the list below isn't
+            held back by the slower re-rank. */}
+        {topLoading ? (
+          <div className="mt-6">
+            <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-primary-strong">
+              <Icon name="sparkles" className="h-4 w-4" />
+              Top matches
+            </h2>
+            <JobsSkeleton count={2} className="space-y-3" />
+          </div>
+        ) : (
+          topMatches &&
+          topMatches.length > 0 && (
+            <div className="mt-6">
+              <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-primary-strong">
+                <Icon name="sparkles" className="h-4 w-4" />
+                Top matches
+              </h2>
+              <div className="space-y-3">
+                {topMatches.map((job) => (
+                  <JobCard key={`top-${job.id}`} job={job} />
+                ))}
+              </div>
+            </div>
+          )
+        )}
 
-        {!loadingResults && jobs && jobs.length === 0 && (
+        {/* Feed — shown as soon as the matched postings load. While loading we still show
+            the "All matches" heading above the skeleton so the section is labelled. */}
+        {feedLoading && (
+          <>
+            <h2 className="mt-8 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+              All matches
+            </h2>
+            <JobsSkeleton className="mt-3 space-y-3" />
+          </>
+        )}
+
+        {!feedLoading && jobs && jobs.length === 0 && (
           <div className="mt-12 flex flex-col items-center text-center text-muted-foreground">
             <Icon name="briefcase" className="h-10 w-10" />
             <p className="mt-3">No postings found for your preferences right now.</p>
           </div>
         )}
 
-        {!loadingResults && jobs && jobs.length > 0 && (
+        {!feedLoading && jobs && jobs.length > 0 && (
           <>
-            {/* Top matches: LLM-reranked best fits with their reason inline. */}
-            {topMatches && topMatches.length > 0 && (
-              <div className="mt-6">
-                <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-primary-strong">
-                  <Icon name="sparkles" className="h-4 w-4" />
-                  Top matches
-                </h2>
-                <div className="space-y-3">
-                  {topMatches.map((job) => (
-                    <JobCard key={`top-${job.id}`} job={job} />
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {topMatches && topMatches.length > 0 && (
-              <h2 className="mt-8 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                All matches
-              </h2>
-            )}
+            {/* Pinned above the list — present whether or not there are Top matches above. */}
+            <h2 className="mt-8 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+              All matches
+            </h2>
             <div className="mt-3 space-y-3">
               {jobs
                 .slice(0, visible)

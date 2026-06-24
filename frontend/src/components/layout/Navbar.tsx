@@ -5,8 +5,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AuthButton } from "@/components/layout/AuthButton";
 import { NavTabs } from "@/components/layout/NavTabs";
-import { MobileMenu } from "@/components/layout/MobileMenu";
 import { isSigningIn, subscribeSigningIn } from "@/lib/signingStatus";
+import { cn } from "@/lib/cn";
 
 export function Navbar() {
   const pathname = usePathname();
@@ -22,7 +22,7 @@ export function Navbar() {
       <div className="navbar-inner">
         {lockBrand ? (
           // Same mark, but a plain span — no link, no hover hop — so it does nothing.
-          <span className="brand justify-self-start select-none">
+          <span className={cn("brand justify-self-start select-none", !minimal && "max-sm:hidden")}>
             {/* eslint-disable-next-line @next/next/no-img-element -- static export, unoptimized */}
             <img src="/icons/rabbitrole.png" alt="" className="h-12 w-auto" />
             <span className="-ml-4">
@@ -30,7 +30,7 @@ export function Navbar() {
             </span>
           </span>
         ) : (
-          <Link href="/" className="brand justify-self-start">
+          <Link href="/" className={cn("brand justify-self-start", !minimal && "max-sm:hidden")}>
             {/* eslint-disable-next-line @next/next/no-img-element -- static export, unoptimized */}
             <img src="/icons/rabbitrole.png" alt="" className="h-12 w-auto" />
             <span className="-ml-4">
@@ -40,15 +40,13 @@ export function Navbar() {
         )}
         {!minimal && (
           <>
-            {/* Desktop: centered tabs. Mobile: tabs move into the burger menu. */}
-            <nav className="hidden items-center gap-2 justify-self-center sm:flex">
+            {/* Tabs sit in the bar on every size now (no burger). Pinned to col 2 so they
+                stay centered even on mobile, where the brand is hidden to make room. */}
+            <nav className="col-start-2 flex items-center gap-2 justify-self-center">
               <NavTabs />
             </nav>
-            {/* Pin to the last column: on mobile the hidden nav is dropped from the
-                grid, so without this the controls would auto-place into the center. */}
             <div className="col-start-3 flex items-center gap-1 justify-self-end">
               <AuthButton />
-              <MobileMenu />
             </div>
           </>
         )}

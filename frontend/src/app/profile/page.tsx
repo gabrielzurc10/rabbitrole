@@ -252,7 +252,12 @@ export default function ProfilePage() {
         </div>
       </Dialog>
 
-      <Toast open={savedToast} message="Saved" onClose={() => setSavedToast(false)} />
+      <Toast
+        open={savedToast}
+        message="Changes are saved"
+        placement="top-center"
+        onClose={() => setSavedToast(false)}
+      />
     </div>
   );
 }

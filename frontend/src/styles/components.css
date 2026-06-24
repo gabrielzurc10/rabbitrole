@@ -14,16 +14,23 @@
     @apply sticky top-0 z-40 w-full px-4 pt-3 sm:px-6 lg:px-8;
   }
   .navbar-inner {
-    /* Floating solid pill (borderless). Dark mode uses a lighter shade of the
-       theme's dark-blue (hue ~222, well above the page's 5% lightness) so it
-       stays on-palette. 3-column grid keeps the tabs centered (col 2)
-       regardless of the brand/controls widths on the sides. */
+    /* Floating solid pill (borderless). Dark mode matches the cards (bg-card) so the
+       pill sits on-palette above the darker page. 3-column grid keeps the tabs
+       centered (col 2) regardless of the brand/controls widths on the sides. */
     @apply mx-auto grid h-14 max-w-4xl grid-cols-[1fr_auto_1fr] items-center
-      rounded-full bg-background px-4 dark:bg-[hsl(222_40%_18%)]
+      rounded-full bg-background px-4 dark:bg-card
       shadow-[0_0_30px_rgba(0,0,0,0.08)];
   }
   .brand {
     @apply flex items-center gap-2 text-lg font-semibold tracking-tight;
+  }
+  /* Sliding selection pill behind the active nav tab — positioned/sized to the active
+     tab in JS (NavTabs), so it slides between the variable-width tabs on a switch. */
+  .nav-thumb {
+    @apply pointer-events-none absolute left-0 top-0 h-full rounded-full bg-primary;
+  }
+  .nav-thumb-animate {
+    @apply motion-safe:transition-[transform,width] motion-safe:duration-300 ease-out;
   }
   .site-footer {
     @apply mt-24 border-t border-foreground/20 bg-white dark:border-white/20 dark:bg-transparent;
@@ -468,7 +475,7 @@
   .theme-switch {
     /* Dark: a near-black inset track so the lighter thumb reads as raised (in light
        mode the thumb is white over a light-grey track — same raised effect). */
-    @apply relative inline-flex items-center gap-0.5 rounded-full bg-muted/60 p-0.5
+    @apply relative inline-flex items-center gap-0.5 rounded-full bg-muted p-0.5
       dark:bg-background;
   }
   /* The sliding selected-state circle (positioned absolutely; the buttons sit above
@@ -534,6 +541,16 @@
   .toast {
     @apply fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-lg
       bg-primary px-4 py-3 text-sm font-medium text-primary-foreground shadow-lg;
+  }
+  /* Top-center variant: a full-width, click-through bar just below the navbar pill
+     (sticky pt-3 + h-14 ≈ 68px) that centers the pill, so the pill's own slide-down
+     transform doesn't have to also do the horizontal centering. */
+  .toast-top-wrap {
+    @apply pointer-events-none fixed inset-x-0 top-[76px] z-50 flex justify-center px-4;
+  }
+  .toast-top {
+    @apply flex items-center gap-2 rounded-lg bg-primary px-4 py-3 text-sm
+      font-medium text-primary-foreground shadow-lg;
   }
 
   /* ---------- skeleton (loading shimmer) ---------- */

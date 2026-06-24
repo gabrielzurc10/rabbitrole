@@ -13,7 +13,9 @@ const EVENT = "rr-onboarded";
 // sign-out can clear them (below) without a circular import back into lib/api.
 export const PROFILE_CACHE_KEY = "rr.profile";
 export const JOBS_CACHE_KEY = "rr.jobs";
+export const TOP_MATCHES_CACHE_KEY = "rr.topmatches";
 export const RESUME_CACHE_KEY = "rr.resumes";
+export const ANALYSIS_CACHE_KEY = "rr.analyses";
 
 export function setOnboarded(value: boolean): void {
   if (typeof window === "undefined") return;
@@ -25,7 +27,9 @@ export function setOnboarded(value: boolean): void {
     // next user who signs in on this same tab.
     sessionStorage.removeItem(PROFILE_CACHE_KEY);
     sessionStorage.removeItem(JOBS_CACHE_KEY);
+    sessionStorage.removeItem(TOP_MATCHES_CACHE_KEY);
     sessionStorage.removeItem(RESUME_CACHE_KEY);
+    sessionStorage.removeItem(ANALYSIS_CACHE_KEY);
   }
   window.dispatchEvent(new Event(EVENT));
 }

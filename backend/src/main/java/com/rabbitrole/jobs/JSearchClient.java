@@ -9,8 +9,10 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestClient;
 
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -64,7 +66,46 @@ public class JSearchClient {
             return List.of();
         }
         List<Map<String, Object>> raw = (List<Map<String, Object>>) response.get("data");
-        return raw.stream().map(this::toJob).toList();
+        // JSearch's native employment_types filter is loose for the less-common types
+        // (a PARTTIME/INTERN search still pads results with pure FULLTIME postings), so
+        // enforce the selection here too — multi-type aware, against the raw type list.
+        return raw.stream()
+                .filter(r -> matchesEmploymentTypes(r, employmentTypes))
+                .map(this::toJob)
+                .toList();
+    }
+
+    /**
+     * Whether a raw posting matches the requested employment types. Empty selection = any
+     * type; a posting with no recognised type is kept ("don't hide a maybe"); otherwise it
+     * matches if ANY of its types was requested — so a "FULLTIME,PARTTIME" job is kept for a
+     * part-time seeker, while a pure "FULLTIME" job is dropped.
+     */
+    static boolean matchesEmploymentTypes(Map<String, Object> raw, List<EmploymentType> wanted) {
+        if (wanted == null || wanted.isEmpty()) {
+            return true;
+        }
+        Set<EmploymentType> jobTypes = employmentTypesOf(raw);
+        return jobTypes.isEmpty() || jobTypes.stream().anyMatch(wanted::contains);
+    }
+
+    /** Every employment type JSearch lists for a posting (the array + the singular field). */
+    private static Set<EmploymentType> employmentTypesOf(Map<String, Object> raw) {
+        Set<EmploymentType> types = new LinkedHashSet<>();
+        if (raw.get("job_employment_types") instanceof List<?> list) {
+            for (Object value : list) {
+                EmploymentType type = EmploymentType.fromApi(value == null ? null : value.toString());
+                if (type != null) {
+                    types.add(type);
+                }
+            }
+        }
+        Object singular = raw.get("job_employment_type");
+        EmploymentType type = EmploymentType.fromApi(singular == null ? null : singular.toString());
+        if (type != null) {
+            types.add(type);
+        }
+        return types;
     }
 
     private Map<String, Object> fetchWithRetry(String role, String where, boolean remoteOnly,
@@ -134,7 +175,10 @@ public class JSearchClient {
                 city,
                 state,
                 remote ? "remote" : null,                       // native remote flag
-                employmentType(r.get("job_employment_types")),  // native employment type
+                // Prefer the array, fall back to the singular string ("Full-time") — JSearch
+                // often populates only one, and a missing type would otherwise slip past the
+                // employment-type filter (which keeps untyped postings).
+                employmentType(r.get("job_employment_types"), r.get("job_employment_type")),
                 str(r.get("job_description")),
                 str(r.get("job_apply_link")),    // direct link to the source posting
                 nullIfEmpty(str(r.get("job_posted_at_datetime_utc"))), // ISO-8601 UTC
@@ -157,12 +201,13 @@ public class JSearchClient {
     }
 
     /**
-     * Maps JSearch's {@code job_employment_types} (e.g. ["FULLTIME"]) to our slug, or null.
-     * A posting can carry several types; take the first we recognise rather than assuming
-     * the first element is one we know.
+     * Maps JSearch's employment type to our slug, or null. Prefers the array
+     * {@code job_employment_types} (e.g. ["FULLTIME"]) — taking the first value we
+     * recognise — then falls back to the singular {@code job_employment_type}
+     * ("Full-time"), since a posting frequently carries only one of the two.
      */
-    private static String employmentType(Object raw) {
-        if (raw instanceof List<?> list) {
+    private static String employmentType(Object plural, Object singular) {
+        if (plural instanceof List<?> list) {
             for (Object value : list) {
                 EmploymentType type = EmploymentType.fromApi(value == null ? null : value.toString());
                 if (type != null) {
@@ -170,7 +215,8 @@ public class JSearchClient {
                 }
             }
         }
-        return null;
+        EmploymentType type = EmploymentType.fromApi(singular == null ? null : singular.toString());
+        return type == null ? null : type.slug();
     }
 
     /**

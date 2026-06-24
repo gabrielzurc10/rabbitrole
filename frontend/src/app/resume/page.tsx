@@ -14,7 +14,7 @@ import { ResumeUploader } from "@/components/ResumeUploader";
 import { ResumeEditorCard } from "@/components/ResumeEditorCard";
 import { AnalyzingDoc } from "@/components/AnalyzingDoc";
 import { ResumeReviewSkeleton, ReviewBodySkeleton } from "@/components/Skeleton";
-import { getAnalysis, getProfile, peekProfile, ApiError } from "@/lib/api";
+import { getAnalysis, getProfile, peekProfile, peekAnalysis, ApiError } from "@/lib/api";
 import { setOnboardingDraft, takeAnalyzeError } from "@/lib/onboardingDraft";
 import {
   getAnalysisStatus,
@@ -39,7 +39,14 @@ function ResumeResult() {
   const [profile, setProfile] = useState<Profile | null | undefined>(() =>
     hydrated ? peekProfile() : undefined,
   );
-  const [analysis, setAnalysis] = useState<Analysis | null>(null);
+  // Seed the review from the cache (past hydration) so switching back to this tab
+  // restores it instantly, with no refetch or skeleton flash. The id is immutable, so
+  // we resolve it the same way the body does: explicit query param, else the profile's.
+  const [analysis, setAnalysis] = useState<Analysis | null>(() => {
+    if (!hydrated) return null;
+    const id = params.get("id") ?? peekProfile()?.analysisId;
+    return id ? (peekAnalysis(id) ?? null) : null;
+  });
   const [error, setError] = useState<string | null>(null);
   // The profile can point at an analysis the backend no longer has (404). That's not a
   // hard error — fall back to the "no analysis yet" state so the user can re-upload.

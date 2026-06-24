@@ -127,22 +127,6 @@ class JobServiceTest {
     }
 
     @Test
-    void employmentTypeFilterKeepsSelectedAndUnknownDropsOthers() {
-        Profile p = profile(false, List.of(EmploymentType.FULL_TIME),
-                List.of(new CityPreference("Austin", "TX")));
-        when(client.search(eq("Backend Engineer"), eq("Austin, TX"), eq(false), anyList(), anyInt()))
-                .thenReturn(List.of(
-                        job("a", "full-time"), // selected → kept
-                        job("b", null),        // no native type → kept (don't hide a maybe)
-                        job("c", "contract"))  // a type they didn't pick → dropped
-                );
-
-        List<Job> result = service.forProfile(p, "resume text", 0);
-
-        assertThat(result).extracting(Job::id).containsExactly("a", "b");
-    }
-
-    @Test
     void noResumeReturnsUnscored() {
         Profile p = profile(true, List.of(), List.of());
         when(client.search(eq("Backend Engineer"), isNull(), eq(true), anyList(), anyInt()))

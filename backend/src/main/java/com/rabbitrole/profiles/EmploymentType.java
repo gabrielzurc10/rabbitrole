@@ -33,13 +33,19 @@ public enum EmploymentType {
         };
     }
 
-    /** The {@link EmploymentType} for a JSearch {@code job_employment_types} value, or null. */
+    /**
+     * The {@link EmploymentType} for a JSearch employment-type value, or null. Tolerant of
+     * both response shapes: the array {@code job_employment_types} (e.g. "FULLTIME") and the
+     * singular {@code job_employment_type} (e.g. "Full-time") — non-letters are stripped and
+     * case ignored, so "Full-time" → FULL_TIME, "Contractor" → CONTRACT, etc.
+     */
     public static EmploymentType fromApi(String value) {
         if (value == null) {
             return null;
         }
+        String normalized = value.replaceAll("[^A-Za-z]", "").toUpperCase(java.util.Locale.ROOT);
         for (EmploymentType t : values()) {
-            if (t.apiValue.equalsIgnoreCase(value)) {
+            if (t.apiValue.equals(normalized)) {
                 return t;
             }
         }

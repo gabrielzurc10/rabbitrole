@@ -11,8 +11,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 /**
  * Fetches live postings for a role and (optionally) ranks them against a resume.
@@ -88,7 +86,9 @@ public class JobService {
             }
         }
 
-        List<Job> jobs = filterToProfile(new ArrayList<>(interleave(perRole).values()), profile);
+        // Employment-type filtering happens in JSearchClient (multi-type aware, against the
+        // raw JSearch types), so the interleaved pool is already filtered here.
+        List<Job> jobs = new ArrayList<>(interleave(perRole).values());
         if (resumeText == null || resumeText.isBlank() || jobs.isEmpty()) {
             return jobs; // unscored when there's no resume to rank against
         }
@@ -138,23 +138,6 @@ public class JobService {
             batches.add(safeSearch(role, null, false, types, page));
         }
         return batches;
-    }
-
-    /**
-     * Belt-and-suspenders pass over what JSearch already filtered natively (via
-     * {@code job_employment_types} on the request): keep postings whose type is one
-     * the user picked. An empty selection means "any type"; a job with no type
-     * (rare — the field is native) is kept rather than hidden.
-     */
-    private static List<Job> filterToProfile(List<Job> jobs, Profile profile) {
-        List<EmploymentType> wanted = profile.employmentTypes();
-        if (wanted == null || wanted.isEmpty()) {
-            return jobs;
-        }
-        Set<String> wantedSlugs = wanted.stream().map(EmploymentType::slug).collect(Collectors.toSet());
-        return jobs.stream()
-                .filter(j -> j.employmentType() == null || wantedSlugs.contains(j.employmentType()))
-                .toList();
     }
 
     /** Content key collapsing the same posting cross-listed under different ids. */

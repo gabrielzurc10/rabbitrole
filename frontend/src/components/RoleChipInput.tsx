@@ -38,15 +38,21 @@ export function RoleChipInput({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const chipRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const prevRects = useRef<Map<string, { left: number; top: number }>>(new Map());
+  // The previous role order, so the FLIP only fires on a genuine reorder/add/remove —
+  // not on unrelated re-renders (typing, or the parent's `saving` toggle). Without this
+  // gate a sub-pixel layout difference on such a render slides the chips a few px (a
+  // visible "shift" while saving), since the only other guard is an exact dx/dy === 0.
+  const prevOrder = useRef<string[]>(value);
   useIsomorphicLayoutEffect(() => {
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const orderChanged = prevOrder.current.join("|") !== value.join("|");
     const origin = containerRef.current?.getBoundingClientRect();
     const newRects = new Map<string, { left: number; top: number }>();
     chipRefs.current.forEach((el, role) => {
       const r = el.getBoundingClientRect();
       newRects.set(role, { left: r.left - (origin?.left ?? 0), top: r.top - (origin?.top ?? 0) });
     });
-    if (!reduce) {
+    if (!reduce && orderChanged) {
       chipRefs.current.forEach((el, role) => {
         const prev = prevRects.current.get(role);
         const next = newRects.get(role);
@@ -61,6 +67,7 @@ export function RoleChipInput({
       });
     }
     prevRects.current = newRects;
+    prevOrder.current = value;
   });
 
   function add() {
