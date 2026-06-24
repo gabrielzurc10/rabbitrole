@@ -3,7 +3,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Icon } from "@/components/ui/icon";
+import { ColorIcon } from "@/components/ui/color-icon";
 import { cn } from "@/lib/cn";
 import { isAuthenticated } from "@/lib/auth";
 import { isOnboarded, subscribeOnboarded } from "@/lib/session";
@@ -83,8 +83,8 @@ export function NavTabs() {
             href={tab.href}
             aria-current={active ? "page" : undefined}
             className={cn(
-              "btn btn-sm group relative z-10",
-              active ? "text-white" : "text-foreground hover:bg-muted",
+              "btn btn-sm group relative z-10 text-foreground",
+              !active && "hover:bg-muted",
             )}
           >
             {tab.href === "/resume/" && analyzing ? (
@@ -94,7 +94,7 @@ export function NavTabs() {
                 aria-label="Analyzing your resume"
               />
             ) : (
-              <Icon name={tab.icon} className="icon-nudge-up h-4 w-4" />
+              <ColorIcon name={tab.icon} className="icon-nudge-up h-4 w-4" />
             )}
             {tab.label}
           </Link>

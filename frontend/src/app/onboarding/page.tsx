@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Card, CardBody } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
+import { ColorIcon } from "@/components/ui/color-icon";
 import { ErrorAlert } from "@/components/ui/alert";
 import { ResumeUploader } from "@/components/ResumeUploader";
 import { RoleChipInput } from "@/components/RoleChipInput";
@@ -192,7 +193,7 @@ export default function OnboardingPage() {
             </Button>
           ) : (
             <Button size="lg" className="group hover:opacity-100" onClick={start}>
-              <Icon name="sparkles" className="icon-nudge-up h-4 w-4" />
+              <ColorIcon name="sparkles" className="icon-nudge-up h-4 w-4" />
               Start analysis
             </Button>
           )}

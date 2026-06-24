@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Card, CardBody, CardTitle, CardSubtitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Icon } from "@/components/ui/icon";
+import { ColorIcon } from "@/components/ui/color-icon";
 import { Dialog } from "@/components/ui/dialog";
 import { ErrorAlert } from "@/components/ui/alert";
 import { MatchRing } from "@/components/MatchRing";
@@ -111,7 +111,7 @@ export function ResumeCard({
             )}
             {resumeId && (
               <span className="mt-2 flex items-center gap-2 text-sm text-foreground">
-                <Icon name="file-text" className="h-4 w-4 shrink-0" />
+                <ColorIcon name="file-text" className="h-4 w-4 shrink-0" />
                 <span className="truncate font-medium">{name}</span>
               </span>
             )}
@@ -122,18 +122,18 @@ export function ResumeCard({
           {resumeId && (
             <>
               <Button variant="outline" size="sm" className="group" onClick={view} disabled={busy}>
-                <Icon name="file-text" className="icon-nudge-up h-4 w-4" />
+                <ColorIcon name="file-text" className="icon-nudge-up h-4 w-4" />
                 View resume
               </Button>
               <Button variant="outline" size="sm" className="group" onClick={download} disabled={busy}>
-                <Icon name="download" className="icon-nudge-up h-4 w-4" />
+                <ColorIcon name="download" className="icon-nudge-up h-4 w-4" />
                 Download
               </Button>
             </>
           )}
           {analysisId && (
             <Link href={`/resume/?id=${analysisId}`} className="btn btn-outline btn-sm">
-              <Icon name="sparkles" className="h-4 w-4" />
+              <ColorIcon name="sparkles" className="h-4 w-4" />
               View full review
             </Link>
           )}
@@ -153,7 +153,7 @@ export function ResumeCard({
         )}
         <div className="mt-3 flex justify-end">
           <Button variant="outline" size="sm" className="group" onClick={download} disabled={busy}>
-            <Icon name="download" className="icon-nudge-up h-4 w-4" />
+            <ColorIcon name="download" className="icon-nudge-up h-4 w-4" />
             Download
           </Button>
         </div>

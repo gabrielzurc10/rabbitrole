@@ -24,16 +24,16 @@ export function Navbar() {
           // Same mark, but a plain span — no link, no hover hop — so it does nothing.
           <span className={cn("brand justify-self-start select-none", !minimal && "max-sm:hidden")}>
             {/* eslint-disable-next-line @next/next/no-img-element -- static export, unoptimized */}
-            <img src="/icons/rabbitrole.png" alt="" className="h-12 w-auto" />
-            <span className="-ml-4">
+            <img src="/icons/rabbitrole.png" alt="" className="h-8 w-auto" />
+            <span>
               rabbit<span className="gradient-text">role</span>
             </span>
           </span>
         ) : (
           <Link href="/" className={cn("brand justify-self-start", !minimal && "max-sm:hidden")}>
             {/* eslint-disable-next-line @next/next/no-img-element -- static export, unoptimized */}
-            <img src="/icons/rabbitrole.png" alt="" className="h-12 w-auto" />
-            <span className="-ml-4">
+            <img src="/icons/rabbitrole.png" alt="" className="h-8 w-auto" />
+            <span>
               rabbit<span className="gradient-text">role</span>
             </span>
           </Link>

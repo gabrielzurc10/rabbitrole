@@ -1,4 +1,4 @@
-import { Icon } from "@/components/ui/icon";
+import { ColorIcon } from "@/components/ui/color-icon";
 
 export const metadata = {
   title: "Contact — rabbitrole",
@@ -21,7 +21,7 @@ export default function ContactPage() {
           rabbitrole, you can reach us by email:
         </p>
         <p className="group inline-flex items-center gap-2">
-          <Icon name="mail" className="icon-nudge-up h-4 w-4 text-primary-strong" />
+          <ColorIcon name="mail" className="icon-nudge-up h-4 w-4" />
           <a href={`mailto:${CONTACT_EMAIL}`} className="legal-link">
             {CONTACT_EMAIL}
           </a>

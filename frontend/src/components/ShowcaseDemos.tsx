@@ -1,5 +1,6 @@
 import type { CSSProperties, ReactNode } from "react";
 import { Icon } from "@/components/ui/icon";
+import { ColorIcon } from "@/components/ui/color-icon";
 import { MatchRing } from "@/components/MatchRing";
 import { matchLabel, matchTone } from "@/lib/match";
 import { cn } from "@/lib/cn";
@@ -91,18 +92,18 @@ export function ShowcaseScoreDemo() {
               Graded against your primary role, Software Engineer.
             </p>
             <p className="mt-3 flex items-center gap-2 font-medium">
-              <Icon name="file-text" className="h-4 w-4 shrink-0" />
+              <ColorIcon name="file-text" className="h-4 w-4 shrink-0" />
               resume.pdf
             </p>
           </div>
         </div>
         <div className="flex flex-wrap gap-3">
           <span className="btn btn-outline btn-md">
-            <Icon name="file-text" className="h-4 w-4" />
+            <ColorIcon name="file-text" className="h-4 w-4" />
             View resume
           </span>
           <span className="btn btn-outline btn-md">
-            <Icon name="download" className="h-4 w-4" />
+            <ColorIcon name="download" className="h-4 w-4" />
             Download
           </span>
         </div>
@@ -220,8 +221,11 @@ type DemoJob = {
   company: string;
   loc: string;
   posted: string;
+  type: string;
+  salary: string;
+  via: string;
   pct: number;
-  /** When present, the card renders with its "Why this match?" panel expanded. */
+  /** When present, the card renders with its match-reasoning panel. */
   reasoning?: string;
 };
 
@@ -233,22 +237,28 @@ const JOBS: DemoJob[] = [
     company: "Hexalabs",
     loc: "San Francisco, CA",
     posted: "2 days ago",
+    type: "Full-time",
+    salary: "$140K–$180K/yr",
+    via: "LinkedIn",
     pct: 88,
     reasoning:
       "Strong overlap on the core stack — React, TypeScript and Node all appear in both your resume and the posting. Your AWS and CI/CD experience maps to their cloud-native team; calling out Kubernetes would push this match higher.",
   },
-  { logo: "/logos/demo/northbeam.png", title: "Full Stack Engineer", company: "Northbeam", loc: "Austin, TX", posted: "4 days ago", pct: 84 },
+  { logo: "/logos/demo/northbeam.png", title: "Full Stack Engineer", company: "Northbeam", loc: "Austin, TX", posted: "4 days ago", type: "Full-time", salary: "$120K–$160K/yr", via: "Indeed", pct: 84 },
   {
     logo: "/logos/demo/lumient.png",
     title: "Frontend Engineer",
     company: "Lumient",
     loc: "New York, NY",
     posted: "5 days ago",
+    type: "Contract",
+    salary: "$75–$95/hr",
+    via: "Greenhouse",
     pct: 82,
     reasoning:
       "Your React and TypeScript depth lines up with their design-system work, and the accessibility focus in your last role matches a core requirement. More on performance profiling would push the fit even higher.",
   },
-  { logo: "/logos/demo/pinnacle.png", title: "Backend Engineer", company: "Pinnacle Data", loc: "Seattle, WA", posted: "1 week ago", pct: 79 },
+  { logo: "/logos/demo/pinnacle.png", title: "Backend Engineer", company: "Pinnacle Data", loc: "Seattle, WA", posted: "1 week ago", type: "Full-time", salary: "$130K–$170K/yr", via: "Lever", pct: 79 },
 ];
 
 function DemoJobCard({ job }: { job: (typeof JOBS)[number] }) {
@@ -266,42 +276,50 @@ function DemoJobCard({ job }: { job: (typeof JOBS)[number] }) {
             <p className="job-card-company">{job.company}</p>
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
-          <span className="job-meta-item">
-            <Icon name="map-pin" className="h-4 w-4" />
+        {/* Meta: same fixed-slot grid as the real card (location top-left, posted below). */}
+        <div className="job-card-rule" />
+        <div className="job-card-meta">
+          <span className="job-meta-item col-start-1 row-start-1">
+            <ColorIcon name="map-pin" className="h-4 w-4" />
             {job.loc}
           </span>
-          <span className="job-meta-item">
-            <Icon name="clock" className="h-4 w-4" />
+          <span className="job-meta-item col-start-3 row-start-1 justify-self-end">
+            <ColorIcon name="briefcase" className="h-4 w-4" />
+            {job.type}
+          </span>
+          <span className="job-meta-item col-start-1 row-start-2">
+            <ColorIcon name="clock" className="h-4 w-4" />
             Posted {job.posted}
           </span>
+          <span className="job-meta-item col-start-3 row-start-2 justify-self-end">
+            <ColorIcon name="banknote" className="h-4 w-4" />
+            {job.salary}
+          </span>
         </div>
+        {/* Actions */}
+        <div className="job-card-rule" />
         <div className="job-card-actions">
-          <span className="job-reason-toggle">
-            <Icon name="info" className="h-4 w-4 shrink-0" />
-            <span className="truncate">Why this match?</span>
-            <Icon
-              name="chevron-down"
-              className={cn("h-4 w-4 shrink-0", job.reasoning && "rotate-180")}
-            />
-          </span>
-          <span className="btn btn-primary btn-sm shrink-0">
-            Apply
-            <Icon name="arrow-right" className="h-4 w-4" />
-          </span>
+          <div className="flex shrink-0 items-center gap-3">
+            <span className="truncate text-xs text-muted-foreground">via {job.via}</span>
+            <span className="btn btn-primary btn-sm group">
+              Apply
+              <Icon name="arrow-right" className="icon-nudge-right h-4 w-4" />
+            </span>
+          </div>
         </div>
+        {/* Match reasoning (kept as-is) */}
         {job.reasoning && (
           <div className="job-reason-panel">
             <div className="job-reason-heading">
-              <Icon name="sparkles" className="h-3.5 w-3.5 shrink-0" />
+              <ColorIcon name="sparkles" className="h-3.5 w-3.5 shrink-0" />
               Match reasoning
             </div>
             <p className="job-reason-text">{job.reasoning}</p>
           </div>
         )}
       </div>
-      <div className={cn("job-card-match sm:w-36", tone.panel)}>
-        <MatchRing percent={job.pct} size={68} toneClass={tone.ring} />
+      <div className={cn("job-card-match", tone.panel)}>
+        <MatchRing percent={job.pct} size={84} toneClass={tone.ring} />
         <span className={cn("job-card-match-label", tone.text)}>{matchLabel(job.pct)}</span>
       </div>
     </div>

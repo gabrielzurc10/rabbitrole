@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardBody, CardTitle, CardSubtitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Icon } from "@/components/ui/icon";
+import { ColorIcon } from "@/components/ui/color-icon";
 import { Toast } from "@/components/ui/toast";
 import { RoleChipInput } from "@/components/RoleChipInput";
 import { ResumeUploader } from "@/components/ResumeUploader";
@@ -107,7 +107,7 @@ export function ResumeEditorCard({
           {error && <p className="text-sm text-critical">{error}</p>}
 
           <Button onClick={save} disabled={!canSave} className="group hover:opacity-100">
-            <Icon name="save" className="icon-nudge-up h-4 w-4" />
+            <ColorIcon name="save" className="icon-nudge-up h-4 w-4" />
             {saving ? "Saving…" : willAnalyze ? "Save & Analyze" : "Save"}
           </Button>
         </CardBody>

@@ -8,18 +8,21 @@
   .page {
     @apply mx-auto w-full max-w-5xl px-4 py-10 sm:px-6 lg:px-8;
   }
+  /* Wider variant for the master-detail jobs view (list + side panel need the room). */
+  .page-wide {
+    @apply mx-auto w-full max-w-7xl px-4 py-10 sm:px-6 lg:px-8;
+  }
   .navbar {
     /* Transparent sticky wrapper: holds the pill a little below the top and inside
        the side gutters. The pill itself (.navbar-inner) carries the visuals. */
     @apply sticky top-0 z-40 w-full px-4 pt-3 sm:px-6 lg:px-8;
   }
   .navbar-inner {
-    /* Floating solid pill (borderless). Dark mode matches the cards (bg-card) so the
-       pill sits on-palette above the darker page. 3-column grid keeps the tabs
-       centered (col 2) regardless of the brand/controls widths on the sides. */
+    /* Floating solid pill with a soft centered glow. Dark mode matches the cards
+       (bg-card) so the pill sits on-palette above the darker page. 3-column grid keeps
+       the tabs centered (col 2) regardless of the brand/controls widths on the sides. */
     @apply mx-auto grid h-14 max-w-4xl grid-cols-[1fr_auto_1fr] items-center
-      rounded-full bg-background px-4 dark:bg-card
-      shadow-[0_0_30px_rgba(0,0,0,0.08)];
+      rounded-full bg-background px-4 dark:bg-card shadow-[0_0_30px_rgba(0,0,0,0.08)];
   }
   .brand {
     @apply flex items-center gap-2 text-lg font-semibold tracking-tight;
@@ -130,7 +133,7 @@
   }
   .btn-primary {
     /* Token-driven spring-green -> teal sweep (single source: --primary / --accent). */
-    @apply bg-gradient-to-r from-primary to-accent text-white
+    @apply bg-gradient-to-r from-primary to-accent text-foreground
       shadow-sm hover:opacity-90;
   }
   .btn-secondary {
@@ -147,6 +150,21 @@
   }
   .btn-ghost {
     @apply bg-transparent hover:bg-muted dark:hover:bg-[hsl(217_33%_24%)];
+  }
+  .btn-critical {
+    /* Destructive action. The base .btn transition animates the lighten on hover. */
+    @apply bg-critical text-white
+      hover:bg-[hsl(0_88%_62%)] dark:hover:bg-[hsl(0_88%_74%)];
+  }
+
+  /* ---------- colour icons (raster illustrations) ---------- */
+  /* A crisp black outline (like the rabbitrole logo) stamped around every ColorIcon's
+     silhouette via stacked 1px drop-shadows, so the icons read boldly on any surface —
+     light, dark, or a coloured button. */
+  .color-icon {
+    filter:
+      drop-shadow(0.5px 0 0 #000) drop-shadow(-0.5px 0 0 #000)
+      drop-shadow(0 0.5px 0 #000) drop-shadow(0 -0.5px 0 #000);
   }
 
   /* ---------- card ---------- */
@@ -213,8 +231,15 @@
 
   /* ---------- job card ---------- */
   .job-card {
-    @apply flex flex-col overflow-hidden rounded-2xl bg-card text-card-foreground
-      shadow-[0_0_15px_rgba(0,0,0,0.1)] sm:flex-row;
+    /* Selectable list item: the whole card is a button (role="button"). A ring grows
+       on hover/selection without shifting layout (ring sits inside via inset). */
+    @apply flex cursor-pointer flex-col overflow-hidden rounded-2xl bg-card text-card-foreground
+      shadow-[0_0_15px_rgba(0,0,0,0.1)] outline-none ring-2 ring-transparent transition-shadow
+      hover:shadow-[0_0_22px_rgba(0,0,0,0.2)] focus-visible:ring-ring sm:flex-row;
+  }
+  .job-card-selected {
+    /* Selected: green ring around the card. */
+    @apply ring-primary;
   }
   .job-card-main {
     @apply min-w-0 flex-1 space-y-4 p-5;
@@ -251,14 +276,8 @@
     @apply inline-flex items-center gap-1.5 text-sm text-muted-foreground;
   }
   .job-card-actions {
-    /* "Why this match?" on the left, Apply on the right — kept on one row at
-       every width (the toggle truncates before it wraps). */
-    @apply flex flex-row items-center justify-between gap-2;
-  }
-  .job-reason-toggle {
-    @apply inline-flex min-w-0 items-center gap-1.5 text-xs font-medium text-primary-strong
-      focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
-      focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded;
+    /* Apply (with "via …") aligned to the right of the card. */
+    @apply flex flex-row items-center justify-end gap-2;
   }
   .job-reason-panel {
     /* AI-insight callout: brand-green tint. */
@@ -270,6 +289,91 @@
   }
   .job-reason-text {
     @apply text-sm leading-relaxed text-foreground/80;
+  }
+
+  /* ---------- jobs master-detail layout ---------- */
+  .jobs-layout {
+    /* Single column until lg, where the list and the detail panel split the width
+       evenly (50/50). `items-start` lets the panel stick while the list scrolls. */
+    @apply lg:grid lg:grid-cols-2 lg:items-start lg:gap-6;
+  }
+  .job-detail-panel {
+    /* Sticky beside the list on desktop; the bottom sheet replaces it below lg.
+       Fixed to the viewport height (minus the sticky offset + a bottom gap) so the
+       card always fits the screen and its body scrolls internally. The extra top
+       margin (vs the list's mt-6) drops the card past the section heading so its top
+       lines up with the first job card, not the "Top matches"/"All matches" label. */
+    @apply mt-6 hidden lg:sticky lg:top-24 lg:mt-[3.5rem] lg:block lg:h-[calc(100vh-7.5rem)];
+  }
+  .job-detail-empty {
+    /* Same card as the panel/list cards, centred placeholder. */
+    @apply flex h-full flex-col items-center justify-center rounded-2xl bg-card p-10
+      text-center text-muted-foreground shadow-[0_0_15px_rgba(0,0,0,0.1)];
+  }
+
+  /* ---------- job detail (panel + sheet shared) ---------- */
+  .job-detail {
+    /* White card matching the list cards; fills the panel height with a pinned header
+       and footer, and a scrollable body in between. */
+    @apply flex h-full flex-col overflow-hidden rounded-2xl bg-card text-card-foreground
+      shadow-[0_0_15px_rgba(0,0,0,0.1)];
+  }
+  .job-detail-top {
+    /* Pinned header + Apply; stays put while the body below scrolls. */
+    @apply shrink-0 space-y-4 p-5 pb-4;
+  }
+  .job-detail-header {
+    /* Ring vertically centred against the title block so the row reads balanced. */
+    @apply flex items-center gap-3;
+  }
+  .job-detail-apply {
+    /* "via …" sits right next to the Apply button. */
+    @apply flex items-center gap-3;
+  }
+  .job-detail-desc-bar {
+    /* "Job description" label on the left, Apply group pushed to the right. */
+    @apply flex items-center gap-3;
+  }
+  .job-detail-fixed {
+    /* Meta + reasoning + the description label/Apply row: pinned (don't scroll). The
+       bottom padding sets a fixed gap below the row, outside the scroll area. */
+    @apply shrink-0 space-y-5 px-5 pb-6;
+  }
+  .job-detail-scroll {
+    /* Only the description text scrolls; takes the remaining height. Scrollbar styling
+       is global (see globals.css base layer). */
+    @apply min-h-0 flex-1 overflow-y-auto px-5 pb-5;
+  }
+  .job-detail-title {
+    @apply font-semibold leading-snug;
+  }
+  .job-detail-ring {
+    /* Compact match indicator in the header — no background tint. */
+    @apply flex shrink-0 flex-col items-center gap-1 text-center;
+  }
+  .job-detail-meta {
+    @apply flex flex-wrap gap-x-4 gap-y-2;
+  }
+  .job-detail-section-heading {
+    @apply mb-2 text-xs font-semibold uppercase tracking-wide text-foreground;
+  }
+  .job-detail-description {
+    /* Preserve the posting's line breaks; clamp long text isn't needed since the
+       panel/sheet scrolls. */
+    @apply whitespace-pre-line text-sm leading-relaxed text-foreground/80;
+  }
+
+  /* ---------- job detail bottom sheet (mobile, radix) ---------- */
+  .job-sheet {
+    /* Slides up from the bottom; rounded top, capped height with internal scroll. */
+    @apply fixed inset-x-0 bottom-0 z-50 max-h-[85vh] overflow-y-auto rounded-t-2xl
+      bg-background p-4 pt-6 shadow-lg focus:outline-none;
+  }
+  .job-sheet-handle {
+    @apply mx-auto mb-3 h-1.5 w-10 rounded-full bg-border;
+  }
+  .job-sheet-body {
+    @apply pb-[env(safe-area-inset-bottom)];
   }
 
   /* ---------- legal pages (terms / privacy) ---------- */
@@ -352,8 +456,7 @@
   }
   .dialog-content {
     @apply fixed left-1/2 top-1/2 z-50 w-[92vw] max-w-lg -translate-x-1/2
-      -translate-y-1/2 rounded-xl bg-card p-6 shadow-lg
-      focus:outline-none;
+      -translate-y-1/2 rounded-xl bg-card p-6 shadow-lg focus:outline-none;
   }
 
   /* ---------- landing showcase demos ---------- */

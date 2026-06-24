@@ -9,6 +9,7 @@ const button = cva("btn", {
       secondary: "btn-secondary",
       outline: "btn-outline",
       ghost: "btn-ghost",
+      critical: "btn-critical",
     },
     size: {
       sm: "btn-sm",

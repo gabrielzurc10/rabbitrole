@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Icon } from "@/components/ui/icon";
+import { ColorIcon } from "@/components/ui/color-icon";
 import { cn } from "@/lib/cn";
 
 /**
@@ -37,7 +37,7 @@ export function ResumeUploader({
     >
       {/* The file input is hidden inside the label. */}
       <label className="btn btn-outline btn-md group cursor-pointer">
-        <Icon
+        <ColorIcon
           name="upload"
           className="h-4 w-4 transition-transform duration-200 ease-out group-hover:-translate-y-1 motion-reduce:transform-none"
         />
@@ -49,7 +49,7 @@ export function ResumeUploader({
           onChange={(e) => handleFiles(e.target.files)}
         />
       </label>
-      <span className="text-sm text-muted-foreground">
+      <span className={cn("text-sm", fileName ? "text-foreground" : "text-muted-foreground")}>
         {fileName ?? "PDF, DOC, or DOCX up to 5MB"}
       </span>
     </div>

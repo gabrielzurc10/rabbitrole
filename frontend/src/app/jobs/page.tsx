@@ -4,8 +4,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/ui/icon";
+import { ColorIcon } from "@/components/ui/color-icon";
 import { ErrorAlert } from "@/components/ui/alert";
 import { JobCard } from "@/components/JobCard";
+import { JobDetail } from "@/components/JobDetail";
+import { JobDetailSheet } from "@/components/JobDetailSheet";
 import { JobFilterPanel } from "@/components/JobFilterPanel";
 import { Collapse } from "@/components/Collapse";
 import { EMPLOYMENT_LABELS } from "@/components/EmploymentTypeSelector";
@@ -24,6 +27,7 @@ import {
 } from "@/lib/api";
 import { reanalyzeStored } from "@/lib/analysisStatus";
 import { useRequireAuth } from "@/lib/useRequireAuth";
+import { useMediaQuery } from "@/lib/useMediaQuery";
 import { cn } from "@/lib/cn";
 import type { Job, Profile } from "@/types";
 
@@ -70,6 +74,21 @@ export default function JobsPage() {
   const [applying, setApplying] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
+
+  // Master-detail selection. On desktop (lg+) the picked job fills a sticky side
+  // panel; below lg it opens a bottom sheet instead. `isDesktop` gates the sheet so
+  // Radix's scroll-lock only ever engages on the surface that's actually visible.
+  const [selectedJob, setSelectedJob] = useState<Job | null>(null);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const isDesktop = useMediaQuery("(min-width: 1024px)");
+
+  const selectJob = useCallback(
+    (job: Job) => {
+      setSelectedJob(job);
+      if (!isDesktop) setSheetOpen(true);
+    },
+    [isDesktop],
+  );
 
   // Apply a fresh page-0 result (initial load or after a filter change).
   const setFirstPage = useCallback((list: Job[]) => {
@@ -216,8 +235,8 @@ export default function JobsPage() {
   const topIds = new Set((topMatches ?? []).map((j) => j.id));
 
   return (
-    <div className="page">
-      <div className="mx-auto max-w-3xl">
+    <div className="page-wide">
+      <div className="mx-auto max-w-3xl lg:max-w-none">
         <div>
           <h1 className="text-2xl font-bold uppercase tracking-tight">Matched jobs</h1>
           <p className="mt-1 text-muted-foreground">
@@ -235,14 +254,10 @@ export default function JobsPage() {
                 </span>
               ))}
               {profile.remote ? (
-                <span className="badge badge-primary">
-                  <Icon name="monitor" className="h-3.5 w-3.5" />
-                  Remote
-                </span>
+                <span className="badge badge-primary">Remote</span>
               ) : (
                 profile.cities.map((c, i) => (
                   <span key={`city-${i}`} className="badge badge-primary">
-                    <Icon name="map-pin" className="h-3.5 w-3.5" />
                     {c.city}, {c.state}
                   </span>
                 ))
@@ -259,7 +274,7 @@ export default function JobsPage() {
               aria-expanded={filterOpen}
               className="btn btn-outline btn-md group shrink-0"
             >
-              <Icon name="sliders" className="icon-nudge-up h-4 w-4" />
+              <ColorIcon name="filter" className="icon-nudge-up h-4 w-4" />
               Filter
               <Icon
                 name="chevron-down"
@@ -286,22 +301,27 @@ export default function JobsPage() {
 
         {needsResume && (
           <div className="mt-12 flex flex-col items-center text-center text-muted-foreground">
-            <Icon name="file-text" className="h-10 w-10" />
+            <ColorIcon name="file-text" className="h-10 w-10" />
             <p className="mt-3">Upload a resume to see jobs matched to you.</p>
             <Link href="/resume/" className="btn btn-primary btn-sm group mt-4 hover:opacity-100">
-              <Icon name="upload" className="icon-nudge-up h-4 w-4" />
+              <ColorIcon name="upload" className="icon-nudge-up h-4 w-4" />
               Upload resume
             </Link>
           </div>
         )}
 
+        {/* Master-detail: the matches list (left) and the sticky desktop detail panel
+            (right). On lg+ they sit side by side; below lg the list spans full width and
+            selection opens the bottom sheet instead (rendered after this grid). */}
+        <div className="jobs-layout">
+          <div className="min-w-0">
         {/* Top matches: LLM-reranked best fits with their reason inline. Loads
             independently of the feed (its own skeleton), so the list below isn't
             held back by the slower re-rank. */}
         {topLoading ? (
           <div className="mt-6">
             <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-primary-strong">
-              <Icon name="sparkles" className="h-4 w-4" />
+              <ColorIcon name="sparkles" className="h-4 w-4" />
               Top matches
             </h2>
             <JobsSkeleton count={2} className="space-y-3" />
@@ -311,12 +331,17 @@ export default function JobsPage() {
           topMatches.length > 0 && (
             <div className="mt-6">
               <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-primary-strong">
-                <Icon name="sparkles" className="h-4 w-4" />
+                <ColorIcon name="sparkles" className="h-4 w-4" />
                 Top matches
               </h2>
               <div className="space-y-3">
                 {topMatches.map((job) => (
-                  <JobCard key={`top-${job.id}`} job={job} />
+                  <JobCard
+                    key={`top-${job.id}`}
+                    job={job}
+                    selected={selectedJob?.id === job.id}
+                    onSelect={selectJob}
+                  />
                 ))}
               </div>
             </div>
@@ -336,7 +361,7 @@ export default function JobsPage() {
 
         {!feedLoading && jobs && jobs.length === 0 && (
           <div className="mt-12 flex flex-col items-center text-center text-muted-foreground">
-            <Icon name="briefcase" className="h-10 w-10" />
+            <ColorIcon name="briefcase" className="h-10 w-10" />
             <p className="mt-3">No postings found for your preferences right now.</p>
           </div>
         )}
@@ -357,7 +382,11 @@ export default function JobsPage() {
                     className="motion-safe:animate-[slide-up_0.4s_ease-out_both]"
                     style={{ animationDelay: `${(i % PAGE) * 50}ms` }}
                   >
-                    <JobCard job={job} />
+                    <JobCard
+                      job={job}
+                      selected={selectedJob?.id === job.id}
+                      onSelect={selectJob}
+                    />
                   </div>
                 ))}
             </div>
@@ -378,6 +407,31 @@ export default function JobsPage() {
             {/* Floating back-to-top, appears once the user has scrolled down the list. */}
             <ScrollToTopButton />
           </>
+        )}
+          </div>
+
+          {/* Desktop detail panel: sticky beside the list. Hidden below lg, where the
+              bottom sheet takes over. Shows a placeholder until a job is picked. */}
+          <aside className="job-detail-panel">
+            {selectedJob ? (
+              <JobDetail key={selectedJob.id} job={selectedJob} />
+            ) : (
+              <div className="job-detail-empty">
+                <ColorIcon name="job-search" className="h-16 w-16" />
+                <p className="mt-3">Select a job to see the full details and match reasoning.</p>
+              </div>
+            )}
+          </aside>
+        </div>
+
+        {/* Mobile bottom sheet — only mounted below lg so Radix's scroll-lock never
+            engages on desktop (where the side panel is used instead). */}
+        {!isDesktop && (
+          <JobDetailSheet
+            job={selectedJob}
+            open={sheetOpen}
+            onClose={() => setSheetOpen(false)}
+          />
         )}
       </div>
     </div>

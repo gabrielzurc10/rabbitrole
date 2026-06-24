@@ -4,7 +4,7 @@ import { Suspense, useEffect, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Card, CardBody, CardTitle, CardSubtitle } from "@/components/ui/card";
-import { Icon } from "@/components/ui/icon";
+import { ColorIcon } from "@/components/ui/color-icon";
 import { ErrorAlert } from "@/components/ui/alert";
 import { ScoreSummary } from "@/components/ScoreSummary";
 import { ScoreBreakdown } from "@/components/ScoreBreakdown";
@@ -178,7 +178,7 @@ function ResumeResult() {
             ) : (
               <Card>
                 <CardBody className="flex flex-col items-center gap-2 py-10 text-center">
-                  <Icon name="file-text" className="h-10 w-10 text-muted-foreground" />
+                  <ColorIcon name="file-text" className="h-10 w-10" />
                   <CardTitle>No analysis found</CardTitle>
                   <CardSubtitle>Upload a resume below to start analyzing.</CardSubtitle>
                 </CardBody>

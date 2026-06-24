@@ -2,7 +2,7 @@
 
 import { useEffect, useState, type CSSProperties } from "react";
 import { useTheme } from "next-themes";
-import { Icon } from "@/components/ui/icon";
+import { ColorIcon } from "@/components/ui/color-icon";
 import { cn } from "@/lib/cn";
 
 const ORDER = ["system", "light", "dark"] as const;
@@ -10,6 +10,13 @@ const ICON: Record<(typeof ORDER)[number], string> = {
   system: "monitor",
   light: "sun",
   dark: "moon",
+};
+// The moon's content is nearly square so it reads larger at the same box; the monitor
+// and sun are shorter, so render them a touch bigger to match the moon's visual size.
+const SIZE: Record<(typeof ORDER)[number], string> = {
+  system: "h-5 w-5",
+  light: "h-5 w-5",
+  dark: "h-4 w-4",
 };
 const LABEL: Record<(typeof ORDER)[number], string> = {
   system: "System theme",
@@ -77,7 +84,7 @@ export function ThemeToggle() {
             aria-pressed={active}
             onClick={() => select(mode)}
           >
-            <Icon name={ICON[mode]} className="icon-nudge-up h-4 w-4" />
+            <ColorIcon name={ICON[mode]} className={cn("icon-nudge-up", SIZE[mode])} />
           </button>
         );
       })}

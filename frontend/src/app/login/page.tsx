@@ -3,7 +3,7 @@
 import { type FormEvent, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Icon } from "@/components/ui/icon";
+import { ColorIcon } from "@/components/ui/color-icon";
 import { Card, CardBody } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ErrorAlert } from "@/components/ui/alert";
@@ -196,7 +196,7 @@ function LoginCard() {
                     onChange={(e) => setEmail(e.target.value)}
                   />
                   <Button type="submit" className="group w-full hover:opacity-100" disabled={busy}>
-                    <Icon name="mail" className="icon-nudge-up h-4 w-4" />
+                    <ColorIcon name="mail" className="icon-nudge-up h-4 w-4" />
                     {busy ? "Sending…" : "Email me a code"}
                   </Button>
                 </form>
@@ -225,7 +225,7 @@ function LoginCard() {
                   autoFocus
                 />
                 <Button type="submit" className="group w-full hover:opacity-100" disabled={busy}>
-                  <Icon name="log-in" className="icon-nudge-right h-4 w-4" />
+                  <ColorIcon name="log-in" className="icon-nudge-right h-4 w-4" />
                   {busy ? "Verifying…" : "Verify & sign in"}
                 </Button>
                 <div className="flex justify-between text-xs text-muted-foreground">

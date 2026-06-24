@@ -13,26 +13,13 @@ export function matchLabel(pct: number | null): string {
 /**
  * Colour tone for the match score, by tier: green for a good fit, amber mid, red
  * weak, neutral when unscored. `ring` colours the progress arc, `text` the label,
- * and `panel` tints the match panel's background gradient.
+ * and `panel` is a flat (non-gradient) tint for the match panel's background.
  */
 export function matchTone(pct: number | null): { ring: string; text: string; panel: string } {
   if (pct == null)
     return { ring: "text-muted-foreground", text: "text-muted-foreground", panel: "" };
   if (pct >= 60)
-    return {
-      ring: "text-primary",
-      text: "text-primary-strong",
-      panel: "bg-gradient-to-br from-primary/15 via-accent/10 to-transparent",
-    };
-  if (pct >= 40)
-    return {
-      ring: "text-warning",
-      text: "text-warning",
-      panel: "bg-gradient-to-br from-warning/15 to-transparent",
-    };
-  return {
-    ring: "text-critical",
-    text: "text-critical",
-    panel: "bg-gradient-to-br from-critical/15 to-transparent",
-  };
+    return { ring: "text-primary", text: "text-primary-strong", panel: "bg-primary/10" };
+  if (pct >= 40) return { ring: "text-warning", text: "text-warning", panel: "bg-warning/10" };
+  return { ring: "text-critical", text: "text-critical", panel: "bg-critical/10" };
 }

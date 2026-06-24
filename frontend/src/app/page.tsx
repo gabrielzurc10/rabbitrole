@@ -1,4 +1,5 @@
 import { Icon } from "@/components/ui/icon";
+import { ColorIcon } from "@/components/ui/color-icon";
 import { HeroCta } from "@/components/HeroCta";
 import { LandingGate } from "@/components/LandingGate";
 import { Reveal } from "@/components/Reveal";
@@ -49,7 +50,7 @@ export default function Home() {
         <section className="flex min-h-[calc(100vh-7rem)] items-center justify-center pb-20 sm:pb-28">
           <div className="card mx-auto max-w-3xl p-8 text-center motion-safe:animate-[slide-up_0.4s_ease-out_both] sm:p-12">
             <span className="badge badge-glass mb-5">
-              <Icon name="sparkles" className="h-3.5 w-3.5 text-primary-strong" />
+              <ColorIcon name="sparkles" className="h-3.5 w-3.5 text-primary-strong" />
               AI resume reviewer &amp; job matcher
             </span>
             <h1 className="text-balance text-4xl font-semibold tracking-tight sm:text-5xl">

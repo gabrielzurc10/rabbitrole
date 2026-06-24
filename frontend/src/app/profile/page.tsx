@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardBody, CardTitle, CardSubtitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Icon } from "@/components/ui/icon";
+import { ColorIcon } from "@/components/ui/color-icon";
 import { Dialog } from "@/components/ui/dialog";
 import { ErrorAlert } from "@/components/ui/alert";
 import { Toast } from "@/components/ui/toast";
@@ -126,7 +126,7 @@ export default function ProfilePage() {
             className="group"
             onClick={() => setSignOutOpen(true)}
           >
-            <Icon name="log-out" className="icon-nudge-right h-4 w-4" />
+            <ColorIcon name="log-out" className="icon-nudge-right h-4 w-4" />
             Sign out
           </Button>
         </div>
@@ -151,7 +151,7 @@ export default function ProfilePage() {
             <div>
               <label className="label">Email</label>
               <p className="flex h-10 items-center gap-2 text-sm text-muted-foreground">
-                <Icon name="mail" className="h-4 w-4 shrink-0 text-foreground" />
+                <ColorIcon name="mail" className="h-4 w-4 shrink-0" />
                 {email ?? "—"}
               </p>
             </div>
@@ -162,7 +162,7 @@ export default function ProfilePage() {
                 disabled={!canSave || saving}
                 className="group hover:opacity-100"
               >
-                <Icon name="save" className="icon-nudge-up h-4 w-4" />
+                <ColorIcon name="save" className="icon-nudge-up h-4 w-4" />
                 {saving ? "Saving…" : "Save changes"}
               </Button>
               {saveError && <ErrorAlert message={saveError} />}
@@ -195,7 +195,7 @@ export default function ProfilePage() {
               className="group text-foreground"
               onClick={() => setDeleteOpen(true)}
             >
-              <Icon name="trash" className="icon-nudge-up h-4 w-4" />
+              <ColorIcon name="trash" className="icon-nudge-up h-4 w-4" />
               Delete account
             </Button>
           </CardBody>
@@ -212,8 +212,8 @@ export default function ProfilePage() {
             Cancel
           </Button>
           <Button
-            // bg-none drops btn-primary's gradient so the critical background shows.
-            className="group bg-none bg-critical text-white hover:opacity-100"
+            variant="critical"
+            className="group"
             onClick={confirmDelete}
             disabled={deleting}
           >
@@ -223,10 +223,7 @@ export default function ProfilePage() {
                 Deleting…
               </>
             ) : (
-              <>
-                <Icon name="trash" className="icon-nudge-up h-4 w-4" />
-                Delete everything
-              </>
+              "Delete everything"
             )}
           </Button>
         </div>
@@ -242,11 +239,10 @@ export default function ProfilePage() {
             Cancel
           </Button>
           <Button
-            // bg-none drops btn-primary's gradient so the critical background shows.
+            variant="critical"
             onClick={() => logout()}
-            className="group bg-none bg-critical text-white hover:opacity-100"
+            className="group"
           >
-            <Icon name="log-out" className="icon-nudge-right h-4 w-4" />
             Sign out
           </Button>
         </div>

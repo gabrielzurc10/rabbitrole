@@ -4,14 +4,16 @@ import { cn } from "@/lib/cn";
 export function MatchRing({
   percent,
   size = 56,
+  stroke = 13,
   toneClass = "text-primary",
 }: {
   percent: number;
   size?: number;
+  /** Arc/track thickness in px (thinner reads better at smaller sizes). */
+  stroke?: number;
   /** Color of the progress arc (defaults to the brand green). */
   toneClass?: string;
 }) {
-  const stroke = 13;
   const radius = (size - stroke) / 2;
   const circumference = 2 * Math.PI * radius;
   const offset = circumference - (percent / 100) * circumference;

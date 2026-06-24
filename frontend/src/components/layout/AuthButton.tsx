@@ -3,7 +3,7 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Icon } from "@/components/ui/icon";
+import { ColorIcon } from "@/components/ui/color-icon";
 import { isAuthenticated, logout } from "@/lib/auth";
 
 // localStorage isn't reactive; we re-read auth on each route change instead
@@ -41,7 +41,7 @@ export function AuthButton() {
   if (!mounted) {
     return (
       <span className="btn btn-ghost btn-sm invisible" aria-hidden="true">
-        <Icon name="log-in" className="h-4 w-4" />
+        <ColorIcon name="log-in" className="h-4 w-4" />
         Sign in
       </span>
     );
@@ -56,7 +56,7 @@ export function AuthButton() {
           className="btn btn-sm group text-foreground"
           onClick={() => logout()}
         >
-          <Icon name="log-out" className="icon-nudge-right h-4 w-4" />
+          <ColorIcon name="log-out" className="icon-nudge-right h-4 w-4" />
           Sign out
         </button>
       );
@@ -65,7 +65,7 @@ export function AuthButton() {
   }
   return (
     <Link href="/login/" className="btn btn-primary btn-sm group hover:opacity-100">
-      <Icon name="log-in" className="icon-nudge-right h-4 w-4" />
+      <ColorIcon name="log-in" className="icon-nudge-right h-4 w-4" />
       Sign in
     </Link>
   );

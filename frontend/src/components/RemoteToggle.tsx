@@ -1,6 +1,5 @@
 "use client";
 
-import { Icon } from "@/components/ui/icon";
 import { cn } from "@/lib/cn";
 
 /**
@@ -24,7 +23,6 @@ export function RemoteToggle({
       onClick={() => onChange(!value)}
       className={cn("segment flex-row px-4 py-2", value && "segment-active")}
     >
-      <Icon name="monitor" className="h-5 w-5" />
       Remote
     </button>
   );
