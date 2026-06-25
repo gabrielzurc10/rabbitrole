@@ -7,6 +7,7 @@ import org.springframework.context.annotation.Profile;
 import software.amazon.awssdk.services.cognitoidentityprovider.CognitoIdentityProviderClient;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 
 /**
  * AWS SDK clients for the aws profile. Region + credentials come from the
@@ -26,6 +27,11 @@ public class AwsClientsConfig {
     @Bean
     S3Client s3Client() {
         return S3Client.create();
+    }
+
+    @Bean
+    S3Presigner s3Presigner() {
+        return S3Presigner.create();
     }
 
     @Bean

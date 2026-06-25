@@ -2,6 +2,7 @@ package com.rabbitrole.resume;
 
 import com.rabbitrole.common.ApiException;
 import com.rabbitrole.resume.dto.ResumeFile;
+import com.rabbitrole.resume.dto.ResumeFileUrls;
 import com.rabbitrole.resume.dto.ResumeResponse;
 import org.springframework.stereotype.Service;
 
@@ -63,6 +64,18 @@ public class ResumeService {
     public ResumeFile download(String id, String userId) {
         Resume resume = require(id, userId);
         return new ResumeFile(resume.filename(), resume.filetype(), storage.get(key(id)));
+    }
+
+    /**
+     * Short-lived direct URLs (owner-checked) to view/download the file straight
+     * from storage, bypassing the Lambda response path. Returns {@code null} URLs
+     * in local dev, where the client streams the bytes via {@link #download}.
+     */
+    public ResumeFileUrls fileUrls(String id, String userId) {
+        Resume resume = require(id, userId);
+        String view = storage.presignedUrl(key(id), resume.filetype(), resume.filename(), true);
+        String download = storage.presignedUrl(key(id), resume.filetype(), resume.filename(), false);
+        return new ResumeFileUrls(view, download);
     }
 
     /**

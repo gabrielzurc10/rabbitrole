@@ -33,6 +33,11 @@ public class LocalStorage implements S3Storage {
     }
 
     @Override
+    public String presignedUrl(String key, String contentType, String filename, boolean inline) {
+        return null; // no S3 to presign against locally — callers stream the bytes instead
+    }
+
+    @Override
     public void delete(String key) {
         store.remove(key);
     }

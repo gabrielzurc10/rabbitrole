@@ -120,6 +120,18 @@ export async function getResumeBlob(id: string): Promise<Blob> {
   return res.blob();
 }
 
+/**
+ * Short-lived direct URLs (presigned S3) to view/download the resume straight from
+ * storage. Preferred over getResumeBlob in the deployed env: streaming the bytes
+ * back through the Lambda mangles binary files (a PDF renders as raw text). Both
+ * fields are null in local dev, where the caller falls back to getResumeBlob.
+ */
+export async function getResumeFileUrls(
+  id: string,
+): Promise<{ viewUrl: string | null; downloadUrl: string | null }> {
+  return request(`/api/resumes/${id}/file-url`);
+}
+
 export async function analyzeResume(resumeId: string, role: string): Promise<Analysis> {
   const analysis = await request<Analysis>("/api/analyses", {
     method: "POST",

@@ -8,14 +8,19 @@ import { ColorIcon } from "@/components/ui/color-icon";
 import { Dialog } from "@/components/ui/dialog";
 import { ErrorAlert } from "@/components/ui/alert";
 import { MatchRing } from "@/components/MatchRing";
-import { getResume, getResumeBlob, peekResume, ApiError } from "@/lib/api";
+import { getResume, getResumeBlob, getResumeFileUrls, peekResume, ApiError } from "@/lib/api";
 import type { ResumeUpload } from "@/types";
 
 /**
  * The profile's resume summary card: the score ring, the uploaded file's name,
  * and actions to view it (PDFs render in an inline modal; other formats open in
- * a new tab), download it, or open the full review. The file is fetched once and
- * cached as an object URL, reused by both view + download and revoked on unmount.
+ * a new tab), download it, or open the full review.
+ *
+ * The file loads from short-lived presigned S3 URLs (one for inline view, one for
+ * download) so it bypasses the Lambda response path, which mangles binary files
+ * (a PDF would render as raw text). Local dev has no S3 to presign, so it falls
+ * back to fetching the bytes and serving them from an object URL. URLs are fetched
+ * once, cached, and any object URL is revoked on unmount.
  */
 export function ResumeCard({
   resumeId,
@@ -33,7 +38,8 @@ export function ResumeCard({
   const [meta, setMeta] = useState<ResumeUpload | null>(
     resumeId ? peekResume(resumeId) ?? null : null,
   );
-  const [fileSrc, setFileSrc] = useState<string | null>(null);
+  // Cached view/download URLs (presigned S3, or a local object URL fallback).
+  const [urls, setUrls] = useState<{ view: string; download: string } | null>(null);
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -45,31 +51,41 @@ export function ResumeCard({
       .catch(() => setMeta(null)); // card still works; name just shows generic
   }, [resumeId, meta]);
 
-  // Free the object URL when it's replaced or the card unmounts.
+  // Free the object URL (local fallback only) when the card unmounts.
   useEffect(() => {
     return () => {
-      if (fileSrc) URL.revokeObjectURL(fileSrc);
+      if (urls?.view.startsWith("blob:")) URL.revokeObjectURL(urls.view);
     };
-  }, [fileSrc]);
+  }, [urls]);
 
   const name = meta?.filename ?? "Resume";
   const isPdf =
     (meta?.filetype ?? "").includes("pdf") || name.toLowerCase().endsWith(".pdf");
 
-  // Fetch the bytes once; hand back the cached object URL afterwards.
-  async function fileUrl(): Promise<string> {
-    if (fileSrc) return fileSrc;
-    const blob = await getResumeBlob(resumeId as string);
-    const url = URL.createObjectURL(blob);
-    setFileSrc(url);
-    return url;
+  // Resolve the view/download URLs once. Prefer presigned S3 URLs; fall back to an
+  // object URL from the bytes when the backend can't presign (local dev).
+  async function loadUrls(): Promise<{ view: string; download: string }> {
+    if (urls) return urls;
+    const presigned = await getResumeFileUrls(resumeId as string);
+    let resolved: { view: string; download: string };
+    if (presigned.viewUrl) {
+      resolved = { view: presigned.viewUrl, download: presigned.downloadUrl ?? presigned.viewUrl };
+    } else {
+      const blob = await getResumeBlob(resumeId as string);
+      // Force the type so the iframe renders the PDF instead of showing raw bytes.
+      const typed = isPdf ? new Blob([blob], { type: "application/pdf" }) : blob;
+      const objectUrl = URL.createObjectURL(typed);
+      resolved = { view: objectUrl, download: objectUrl };
+    }
+    setUrls(resolved);
+    return resolved;
   }
 
   async function view() {
     setError(null);
     setBusy(true);
     try {
-      const url = await fileUrl();
+      const { view: url } = await loadUrls();
       if (isPdf) setOpen(true);
       else window.open(url, "_blank", "noopener"); // browser handles .docx etc.
     } catch (e) {
@@ -83,7 +99,7 @@ export function ResumeCard({
     setError(null);
     setBusy(true);
     try {
-      const url = await fileUrl();
+      const { download: url } = await loadUrls();
       const a = document.createElement("a");
       a.href = url;
       a.download = name;
@@ -144,9 +160,9 @@ export function ResumeCard({
 
       <Dialog open={open} onClose={() => setOpen(false)} className="max-w-3xl" title={name}>
         <h2 className="mb-3 truncate pr-8 text-lg font-semibold">{name}</h2>
-        {fileSrc && (
+        {urls?.view && (
           <iframe
-            src={fileSrc}
+            src={urls.view}
             title={name}
             className="h-[75vh] w-full rounded-lg border border-border"
           />

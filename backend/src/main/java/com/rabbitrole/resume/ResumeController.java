@@ -2,6 +2,7 @@ package com.rabbitrole.resume;
 
 import com.rabbitrole.common.CurrentUser;
 import com.rabbitrole.resume.dto.ResumeFile;
+import com.rabbitrole.resume.dto.ResumeFileUrls;
 import com.rabbitrole.resume.dto.ResumeResponse;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
@@ -61,6 +62,17 @@ public class ResumeController {
     @GetMapping("/{id}")
     public ResumeResponse get(@PathVariable String id) {
         return service.get(id, currentUser.id());
+    }
+
+    /**
+     * Short-lived direct URLs (presigned S3) to view/download the file from the
+     * browser. Preferred over {@code /file} in the deployed env: streaming binary
+     * back through the Lambda mangles it unless every content type is registered
+     * as binary, whereas a presigned URL is fetched straight from S3.
+     */
+    @GetMapping("/{id}/file-url")
+    public ResumeFileUrls fileUrl(@PathVariable String id) {
+        return service.fileUrls(id, currentUser.id());
     }
 
     /** The original file bytes, served inline so the browser can preview the PDF. */
