@@ -4,6 +4,7 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
+import { LandingRedirectScript } from "@/components/auth/LandingRedirectScript";
 
 export const metadata: Metadata = {
   title: "rabbitrole",
@@ -19,6 +20,10 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        {/* Pre-paint redirect for signed-in visitors hitting "/" — avoids a landing flash. */}
+        <LandingRedirectScript />
+      </head>
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
         <ThemeProvider>
           <Navbar />
