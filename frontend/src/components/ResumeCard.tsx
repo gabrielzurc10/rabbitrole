@@ -12,9 +12,19 @@ import { getResume, getResumeBlob, getResumeFileUrls, peekResume, ApiError } fro
 import type { ResumeUpload } from "@/types";
 
 /**
+ * Small/touch screens (phones) don't render PDFs inside an iframe — the inline
+ * modal just shows blank — so we open the file in a new tab there instead, where
+ * the mobile browser renders it as a full-page navigation.
+ */
+function prefersNewTab(): boolean {
+  if (typeof window === "undefined") return false;
+  return window.matchMedia("(max-width: 768px)").matches;
+}
+
+/**
  * The profile's resume summary card: the score ring, the uploaded file's name,
- * and actions to view it (PDFs render in an inline modal; other formats open in
- * a new tab), download it, or open the full review.
+ * and actions to view it (PDFs render in an inline modal on desktop, a new tab on
+ * mobile; other formats open in a new tab), download it, or open the full review.
  *
  * The file loads from short-lived presigned S3 URLs (one for inline view, one for
  * download) so it bypasses the Lambda response path, which mangles binary files
@@ -84,11 +94,23 @@ export function ResumeCard({
   async function view() {
     setError(null);
     setBusy(true);
+    // A non-PDF (.docx) always opens in a new tab; a PDF does too on mobile, where
+    // the iframe preview won't render. The tab must be opened now, inside the click
+    // gesture, or mobile popup blockers reject it after the await below.
+    const newTab = !isPdf || prefersNewTab();
+    const pending = newTab ? window.open("", "_blank") : null;
     try {
       const { view: url } = await loadUrls();
-      if (isPdf) setOpen(true);
-      else window.open(url, "_blank", "noopener"); // browser handles .docx etc.
+      if (!newTab) {
+        setOpen(true);
+      } else if (pending) {
+        pending.opener = null;
+        pending.location.replace(url);
+      } else {
+        window.open(url, "_blank", "noopener"); // popup blocked — best effort
+      }
     } catch (e) {
+      pending?.close();
       setError(e instanceof ApiError ? e.message : "Could not open the resume.");
     } finally {
       setBusy(false);

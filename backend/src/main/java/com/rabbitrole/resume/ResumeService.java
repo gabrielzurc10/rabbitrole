@@ -51,7 +51,10 @@ public class ResumeService {
         String id = UUID.randomUUID().toString();
         storage.put(key(id), bytes);
 
-        Resume resume = repository.save(new Resume(id, userId, filename, contentType, text));
+        // Store the type derived from the filename, not the (unreliable) uploaded
+        // Content-Type, so the viewer later serves it with the correct MIME type.
+        Resume resume = repository.save(
+                new Resume(id, userId, filename, contentType(filename, contentType), text));
 
         return toResponse(resume);
     }
@@ -63,7 +66,8 @@ public class ResumeService {
     /** The original file bytes (owner-checked) for inline viewing / download. */
     public ResumeFile download(String id, String userId) {
         Resume resume = require(id, userId);
-        return new ResumeFile(resume.filename(), resume.filetype(), storage.get(key(id)));
+        return new ResumeFile(
+                resume.filename(), contentType(resume.filename(), resume.filetype()), storage.get(key(id)));
     }
 
     /**
@@ -73,8 +77,11 @@ public class ResumeService {
      */
     public ResumeFileUrls fileUrls(String id, String userId) {
         Resume resume = require(id, userId);
-        String view = storage.presignedUrl(key(id), resume.filetype(), resume.filename(), true);
-        String download = storage.presignedUrl(key(id), resume.filetype(), resume.filename(), false);
+        // Derive the type from the filename — the stored filetype can be wrong
+        // (e.g. application/json for a PDF), which would make the viewer show raw text.
+        String type = contentType(resume.filename(), resume.filetype());
+        String view = storage.presignedUrl(key(id), type, resume.filename(), true);
+        String download = storage.presignedUrl(key(id), type, resume.filename(), false);
         return new ResumeFileUrls(view, download);
     }
 
@@ -103,6 +110,27 @@ public class ResumeService {
     /** Storage key for a resume's original file. Single source of truth. */
     private static String key(String resumeId) {
         return "resumes/" + resumeId;
+    }
+
+    /**
+     * The MIME type to label the file with, derived from the filename extension
+     * rather than the uploaded Content-Type. The browser's reported type can't be
+     * trusted — it's arrived as {@code application/json} for PDFs, which makes the
+     * inline viewer render the bytes as raw text — but the extension is reliable
+     * for the formats we accept. Falls back to the stored type for anything else.
+     */
+    static String contentType(String filename, String fallback) {
+        String lower = filename == null ? "" : filename.toLowerCase();
+        if (lower.endsWith(".pdf")) {
+            return "application/pdf";
+        }
+        if (lower.endsWith(".docx")) {
+            return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+        }
+        if (lower.endsWith(".doc")) {
+            return "application/msword";
+        }
+        return (fallback == null || fallback.isBlank()) ? "application/octet-stream" : fallback;
     }
 
     /** Raw extracted text for a resume — used by analysis + job matching. */

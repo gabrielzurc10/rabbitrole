@@ -16,9 +16,13 @@ const useIsomorphicLayoutEffect = typeof window !== "undefined" ? useLayoutEffec
 export function RoleChipInput({
   value,
   onChange,
+  onEnterWhenEmpty,
 }: {
   value: string[];
   onChange: (roles: string[]) => void;
+  // Pressing Enter with an empty field (nothing to add) calls this — e.g. in
+  // onboarding it advances to the next step.
+  onEnterWhenEmpty?: () => void;
 }) {
   const [text, setText] = useState("");
   // Roles mid-exit-animation: kept rendered (with the leave class) until the
@@ -111,7 +115,8 @@ export function RoleChipInput({
           onKeyDown={(e) => {
             if (e.key === "Enter") {
               e.preventDefault();
-              add();
+              if (text.trim()) add();
+              else onEnterWhenEmpty?.();
             }
           }}
         />

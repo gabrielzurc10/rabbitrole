@@ -73,6 +73,30 @@ export default function OnboardingPage() {
     if (step < STEPS.length) setStep(step + 1);
   }
 
+  // Press Enter anywhere (when not typing in a field or on a button) to continue —
+  // useful on steps with no text input (Resume) or after clicking away from one.
+  // Inputs/buttons keep their own Enter behaviour (add a role/city, click), so we
+  // skip those targets here to avoid adding-and-advancing or double-advancing.
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key !== "Enter" || e.defaultPrevented) return;
+      const t = e.target as HTMLElement | null;
+      if (
+        t &&
+        (t.isContentEditable ||
+          ["INPUT", "TEXTAREA", "SELECT", "BUTTON"].includes(t.tagName))
+      ) {
+        return; // let the focused control handle its own Enter
+      }
+      if (step < STEPS.length && stepValid) {
+        e.preventDefault();
+        setStep((s) => s + 1);
+      }
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [step, stepValid]);
+
   function start() {
     if (!file) return;
     setOnboardingDraft({
@@ -122,6 +146,9 @@ export default function OnboardingPage() {
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   onBlur={() => setFullName(titleCase(fullName))}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && stepValid) next();
+                  }}
                   autoFocus
                 />
               </div>
@@ -139,7 +166,13 @@ export default function OnboardingPage() {
                 <p className="mb-3 text-sm text-muted-foreground">
                   Add one or more. The first is your primary role; we score your resume against it.
                 </p>
-                <RoleChipInput value={roles} onChange={setRoles} />
+                <RoleChipInput
+                  value={roles}
+                  onChange={setRoles}
+                  onEnterWhenEmpty={() => {
+                    if (stepValid) next();
+                  }}
+                />
               </div>
             )}
 
