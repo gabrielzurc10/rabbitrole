@@ -45,7 +45,7 @@ rabbitrole closes that loop in one place:
 |-------|-----------|
 | **Frontend** | Next.js (static export), React, TypeScript, Tailwind. Hosted on **S3 + CloudFront**. |
 | **Backend** | Java 21, Spring Boot 3 (Gradle Kotlin DSL). Packaged as a **zip AWS Lambda** on the Java 21 managed runtime **with SnapStart** (via aws-serverless-java-container), fronted by **API Gateway**. |
-| **AI** | OpenAI `gpt-4o-mini` (analysis), `text-embedding-3-small` (matching and RAG). |
+| **AI** | OpenAI `gpt-5.4-mini` (judgment: scoring and re-rank), `gpt-4o-mini` (high-frequency chat), `text-embedding-3-small` (matching and RAG). |
 | **RAG** | Resume critique grounded in live job postings for the target role. |
 | **Database** | **DynamoDB** (on demand) via the AWS SDK. Always warm, no VPC. |
 | **Object storage** | **S3** for uploaded resumes, with presigned access. |

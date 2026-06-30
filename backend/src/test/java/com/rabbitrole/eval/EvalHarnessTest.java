@@ -44,7 +44,7 @@ class EvalHarnessTest {
                 "OPENAI_API_KEY not set — skipping the real-API eval harness.");
 
         OpenAiClient openai = new OpenAiClient(
-                "https://api.openai.com/v1", key, "gpt-4o-mini", "gpt-4o");
+                "https://api.openai.com/v1", key, "gpt-4o-mini", "gpt-5.4-mini");
 
         resumes = mock(ResumeService.class);
         JobService jobs = mock(JobService.class);

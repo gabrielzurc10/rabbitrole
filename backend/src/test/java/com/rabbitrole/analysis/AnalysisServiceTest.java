@@ -36,7 +36,7 @@ class AnalysisServiceTest {
         openai = mock(OpenAiClient.class);
         service = new AnalysisService(resumes, jobs, openai, new InMemoryAnalysisRepository());
 
-        when(openai.judgmentModel()).thenReturn("gpt-4o");
+        when(openai.judgmentModel()).thenReturn("gpt-5.4-mini");
         when(resumes.extractedText(anyString(), anyString())).thenReturn("Backend engineer resume text.");
         when(jobs.forRole(anyString())).thenReturn(List.of(
                 new Job("1", "Backend Engineer", "Acme", null, "Remote", "", "", "remote", null, "Java, AWS", "http://x", null, null, null, null, null, null, null)));

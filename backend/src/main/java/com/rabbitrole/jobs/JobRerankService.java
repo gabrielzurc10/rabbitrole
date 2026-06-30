@@ -54,7 +54,9 @@ public class JobRerankService {
                     JobRerankPrompt.system(n),
                     JobRerankPrompt.user(resumeText, pool),
                     openai.judgmentModel());
-            RerankEnvelope env = json.readValue(raw, RerankEnvelope.class);
+            // Tree-then-bind so a duplicate key in the model output (last wins)
+            // can't trip Jackson's record creator binding. See AnalysisService.
+            RerankEnvelope env = json.treeToValue(json.readTree(raw), RerankEnvelope.class);
             if (env == null || env.matches() == null || env.matches().isEmpty()) {
                 return cosineFallback(pool, n);
             }

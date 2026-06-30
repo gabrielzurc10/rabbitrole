@@ -102,7 +102,11 @@ public class AnalysisService {
 
     private AnalysisEnvelope parseEnvelope(String raw) {
         try {
-            AnalysisEnvelope envelope = json.readValue(raw, AnalysisEnvelope.class);
+            // Bind via the tree model: it collapses any duplicate keys (last value
+            // wins) before record construction, so a quirky model response that
+            // repeats a key — e.g. a trailing "missingSkills" after "tags" — can't
+            // trip Jackson's setterless-creator binding and blow up the parse.
+            AnalysisEnvelope envelope = json.treeToValue(json.readTree(raw), AnalysisEnvelope.class);
             if (envelope == null || envelope.tags() == null || envelope.tags().isEmpty()) {
                 throw new ApiException(HttpStatus.BAD_GATEWAY, "AI returned no feedback tags.");
             }

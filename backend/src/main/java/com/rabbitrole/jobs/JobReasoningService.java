@@ -60,7 +60,9 @@ public class JobReasoningService {
 
     private String parse(String raw) {
         try {
-            ReasonEnvelope envelope = json.readValue(raw, ReasonEnvelope.class);
+            // Tree-then-bind so a duplicate key in the model output (last wins)
+            // can't trip Jackson's record creator binding. See AnalysisService.
+            ReasonEnvelope envelope = json.treeToValue(json.readTree(raw), ReasonEnvelope.class);
             if (envelope == null || envelope.reasoning() == null || envelope.reasoning().isBlank()) {
                 throw new ApiException(HttpStatus.BAD_GATEWAY, "AI returned no reasoning.");
             }

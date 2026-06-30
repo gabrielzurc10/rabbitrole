@@ -24,8 +24,9 @@ openai:
   # Default chat model: cheap, used for high-frequency calls (job "why this match?").
   chat-model: gpt-4o-mini
   # Stronger model for the low-frequency, quality-critical judgment calls (resume
-  # scoring + job re-rank). Falls back to gpt-4o-mini if the key lacks gpt-4o access.
-  judgment-model: gpt-4o
+  # scoring + job re-rank). gpt-5.4-mini brings reasoning to these paths while costing
+  # less than the old gpt-4o. Falls back to gpt-4o-mini if the key lacks access.
+  judgment-model: gpt-5.4-mini
   embedding-model: text-embedding-3-small
 
 # JSearch (RapidAPI) — live job postings. Key from .env locally, SSM in prod.
