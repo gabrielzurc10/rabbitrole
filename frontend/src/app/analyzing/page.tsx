@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { AnalyzingDoc } from "@/components/AnalyzingDoc";
-import { getOnboardingDraft } from "@/lib/onboardingDraft";
+import { getOnboardingDraft, loadPersistedDraft } from "@/lib/onboardingDraft";
 import {
   getAnalysisStatus,
   getServerAnalysisStatus,
@@ -46,12 +46,21 @@ export default function AnalyzingPage() {
     if (started.current) return; // guard against StrictMode double-invoke
     started.current = true;
 
-    const draft = getOnboardingDraft();
-    if (!draft) {
-      leave(); // nothing to do here — step off
-      return;
-    }
-    startAnalysis(draft);
+    let cancelled = false;
+    void (async () => {
+      // Module memory is the fast path; fall back to the durable copy when a full
+      // reload between /onboarding and /analyzing dropped it (else we'd bounce off).
+      const draft = getOnboardingDraft() ?? (await loadPersistedDraft());
+      if (cancelled) return;
+      if (!draft) {
+        leave(); // nothing to do here — step off
+        return;
+      }
+      startAnalysis(draft);
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [ready, leave]);
 
   // React to completion *while this page is still mounted*: go to the fresh review,

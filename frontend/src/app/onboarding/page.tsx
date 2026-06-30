@@ -19,9 +19,11 @@ import { titleCase } from "@/lib/text";
 import {
   getOnboardingDraft,
   loadOnboardingForm,
+  persistDraft,
   saveOnboardingForm,
   setOnboardingDraft,
   takeAnalyzeError,
+  type OnboardingDraft,
 } from "@/lib/onboardingDraft";
 import { useRequireAuth } from "@/lib/useRequireAuth";
 import type { CityPreference, EmploymentType } from "@/types";
@@ -147,9 +149,9 @@ export default function OnboardingPage() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [step, stepValid]);
 
-  function start() {
+  async function start() {
     if (!file) return;
-    setOnboardingDraft({
+    const draft: OnboardingDraft = {
       profile: {
         fullName: titleCase(fullName.trim()),
         targetRoles: roles,
@@ -159,7 +161,9 @@ export default function OnboardingPage() {
       },
       file,
       origin: "/onboarding/",
-    });
+    };
+    setOnboardingDraft(draft); // fast path for a soft nav
+    await persistDraft(draft); // durable copy so /analyzing survives a full reload
     router.replace("/analyzing/");
   }
 

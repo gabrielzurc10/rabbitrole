@@ -63,6 +63,83 @@ export function clearOnboardingForm(): void {
   if (typeof window !== "undefined") sessionStorage.removeItem(FORM_KEY);
 }
 
+// --- Durable draft handoff -------------------------------------------------
+// The in-memory `current` above is the fast path, but it only survives a *soft*
+// client navigation. On the static-export site the /onboarding → /analyzing hop
+// can turn into a full document load (seen in some browsers), which drops module
+// memory and strands /analyzing with no draft — so it bounces the user straight
+// back off the page. To survive that, we also persist the draft durably: the
+// serializable parts in sessionStorage, and the picked File in IndexedDB — the one
+// web store that holds a File/Blob natively (no base64 bloat, no ~5 MB cap).
+// /analyzing recovers from here whenever module memory is empty.
+const DRAFT_META_KEY = "rr.onboardingDraftMeta";
+const IDB_NAME = "rabbitrole";
+const IDB_STORE = "draft";
+const IDB_FILE_KEY = "onboardingFile";
+
+function openDb(): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(IDB_NAME, 1);
+    req.onupgradeneeded = () => req.result.createObjectStore(IDB_STORE);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function idbRun<T>(mode: IDBTransactionMode, op: (store: IDBObjectStore) => IDBRequest | null): Promise<T> {
+  const db = await openDb();
+  try {
+    return await new Promise<T>((resolve, reject) => {
+      const tx = db.transaction(IDB_STORE, mode);
+      const req = op(tx.objectStore(IDB_STORE));
+      tx.oncomplete = () => resolve((req?.result as T) ?? (undefined as T));
+      tx.onerror = () => reject(tx.error);
+    });
+  } finally {
+    db.close();
+  }
+}
+
+/** Persist the draft so /analyzing can recover it after a full reload. Best-effort. */
+export async function persistDraft(draft: OnboardingDraft): Promise<void> {
+  if (typeof window === "undefined") return;
+  try {
+    sessionStorage.setItem(
+      DRAFT_META_KEY,
+      JSON.stringify({ profile: draft.profile, origin: draft.origin }),
+    );
+    await idbRun("readwrite", (store) => store.put(draft.file, IDB_FILE_KEY));
+  } catch {
+    // Durable persistence is best-effort; the in-memory draft still covers a soft nav.
+  }
+}
+
+/** Recover a persisted draft (metadata + File), or null if none/incomplete. */
+export async function loadPersistedDraft(): Promise<OnboardingDraft | null> {
+  if (typeof window === "undefined") return null;
+  const raw = sessionStorage.getItem(DRAFT_META_KEY);
+  if (raw === null) return null;
+  try {
+    const file = await idbRun<File | undefined>("readonly", (store) => store.get(IDB_FILE_KEY));
+    if (!file) return null;
+    const { profile, origin } = JSON.parse(raw) as Pick<OnboardingDraft, "profile" | "origin">;
+    return { profile, file, origin };
+  } catch {
+    return null;
+  }
+}
+
+/** Drop the durable draft — on successful onboarding, or an explicit sign-out. */
+export async function clearPersistedDraft(): Promise<void> {
+  if (typeof window === "undefined") return;
+  sessionStorage.removeItem(DRAFT_META_KEY);
+  try {
+    await idbRun("readwrite", (store) => store.delete(IDB_FILE_KEY));
+  } catch {
+    // ignore — a stale file is overwritten by the next draft anyway
+  }
+}
+
 // One-shot flag so /analyzing can hand an error back to the page it returns to.
 const ANALYZE_ERROR_KEY = "rr.analyzeError";
 

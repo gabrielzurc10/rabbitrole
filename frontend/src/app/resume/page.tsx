@@ -15,7 +15,7 @@ import { ResumeEditorCard } from "@/components/ResumeEditorCard";
 import { AnalyzingDoc } from "@/components/AnalyzingDoc";
 import { ResumeReviewSkeleton, ReviewBodySkeleton } from "@/components/Skeleton";
 import { getAnalysis, getProfile, peekProfile, peekAnalysis, ApiError } from "@/lib/api";
-import { setOnboardingDraft, takeAnalyzeError } from "@/lib/onboardingDraft";
+import { persistDraft, setOnboardingDraft, takeAnalyzeError } from "@/lib/onboardingDraft";
 import {
   getAnalysisStatus,
   getServerAnalysisStatus,
@@ -111,9 +111,11 @@ function ResumeResult() {
       .catch(() => setAnalysisUnavailable(true));
   }, [ready, analysisId]);
 
-  function reAnalyze(file: File) {
+  async function reAnalyze(file: File) {
     if (!profile) return;
-    setOnboardingDraft({ profile, file, origin: "/resume/" });
+    const draft = { profile, file, origin: "/resume/" };
+    setOnboardingDraft(draft); // fast path for a soft nav
+    await persistDraft(draft); // durable copy so /analyzing survives a full reload
     router.replace("/analyzing/");
   }
 

@@ -7,7 +7,7 @@
 // auth runs in "demo mode" — login just routes into the app and no bearer token
 // is sent, which pairs with the backend's local permit-all security.
 import { setOnboarded } from "@/lib/session";
-import { clearOnboardingForm } from "@/lib/onboardingDraft";
+import { clearOnboardingForm, clearPersistedDraft } from "@/lib/onboardingDraft";
 
 const DOMAIN = process.env.NEXT_PUBLIC_COGNITO_DOMAIN ?? "";
 const CLIENT_ID = process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID ?? "";
@@ -400,6 +400,7 @@ export function clearDemoSession(): void {
 export function logout(): void {
   clearTokens(); // access + id + refresh tokens and their expiries
   clearOnboardingForm(); // don't leak a half-filled wizard to the next user on this tab
+  void clearPersistedDraft(); // …including the durable draft (sessionStorage + IndexedDB)
   // The theme is a per-signed-in-user preference: reset to system on sign out so the
   // signed-out app (landing/login) always uses the system theme. ("theme" is
   // next-themes' default storage key; clearing it falls back to defaultTheme="system".)

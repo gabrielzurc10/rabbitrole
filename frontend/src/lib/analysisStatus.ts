@@ -8,6 +8,7 @@ import { analyzeResume, saveProfile, uploadResume } from "@/lib/api";
 import {
   clearOnboardingDraft,
   clearOnboardingForm,
+  clearPersistedDraft,
   flagAnalyzeError,
   type OnboardingDraft,
 } from "@/lib/onboardingDraft";
@@ -75,6 +76,7 @@ export async function startAnalysis(draft: OnboardingDraft): Promise<void> {
     });
     clearOnboardingDraft();
     clearOnboardingForm(); // onboarding complete — drop the persisted wizard inputs
+    void clearPersistedDraft(); // …and the durable draft copy (file in IndexedDB)
     setState({ phase: "done", analysisId: analysis.id, resumeId: uploaded.id, role });
   } catch {
     // Surface a friendly message on whichever page picks the failure up.

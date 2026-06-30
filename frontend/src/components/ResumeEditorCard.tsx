@@ -10,7 +10,7 @@ import { RoleChipInput } from "@/components/RoleChipInput";
 import { ResumeUploader } from "@/components/ResumeUploader";
 import { saveProfile } from "@/lib/api";
 import { reanalyzeStored } from "@/lib/analysisStatus";
-import { setOnboardingDraft } from "@/lib/onboardingDraft";
+import { persistDraft, setOnboardingDraft } from "@/lib/onboardingDraft";
 import type { Profile } from "@/types";
 
 /**
@@ -53,7 +53,9 @@ export function ResumeEditorCard({
     // uploads, analyzes against the (possibly edited) primary role, and persists the
     // profile (roles included). No need to save roles separately first.
     if (file) {
-      setOnboardingDraft({ profile: { ...profile, targetRoles: roles }, file, origin: "/resume/" });
+      const draft = { profile: { ...profile, targetRoles: roles }, file, origin: "/resume/" };
+      setOnboardingDraft(draft); // fast path for a soft nav
+      await persistDraft(draft); // durable copy so /analyzing survives a full reload
       router.replace("/analyzing/");
       return;
     }
