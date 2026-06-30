@@ -20,14 +20,17 @@ public class OpenAiClient {
     private final RestClient http;
     private final String chatModel;
     private final String judgmentModel;
+    private final String fallbackModel;
 
     public OpenAiClient(
             @Value("${openai.base-url}") String baseUrl,
             @Value("${openai.api-key}") String apiKey,
             @Value("${openai.chat-model}") String chatModel,
-            @Value("${openai.judgment-model}") String judgmentModel) {
+            @Value("${openai.judgment-model}") String judgmentModel,
+            @Value("${openai.judgment-fallback-model}") String fallbackModel) {
         this.chatModel = chatModel;
         this.judgmentModel = judgmentModel;
+        this.fallbackModel = fallbackModel;
         this.http = RestClient.builder()
                 .baseUrl(baseUrl)
                 .defaultHeader("Authorization", "Bearer " + apiKey)
@@ -47,9 +50,26 @@ public class OpenAiClient {
     /**
      * Runs a chat completion in JSON mode on the given model and returns the raw
      * JSON string the model produced. Callers own parsing it into their own DTOs.
+     *
+     * If the requested model fails — the key lacks access to it, or the model rejects
+     * the request (e.g. a newer model that won't accept a custom temperature) — we
+     * retry once on {@code judgment-fallback-model} (gpt-4o), so swapping in a stronger
+     * judgment model can never take the feature down. Without this a bad judgment-model
+     * name 502s every resume analysis and job re-rank.
      */
-    @SuppressWarnings("unchecked")
     public String completeJson(String systemPrompt, String userPrompt, String model) {
+        try {
+            return firstMessageContent(post(model, systemPrompt, userPrompt));
+        } catch (RuntimeException primary) {
+            if (model.equals(fallbackModel)) {
+                throw primary; // already on the fallback model — nothing left to try
+            }
+            return firstMessageContent(post(fallbackModel, systemPrompt, userPrompt));
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> post(String model, String systemPrompt, String userPrompt) {
         Map<String, Object> body = Map.of(
                 "model", model,
                 "temperature", 0.2,
@@ -57,10 +77,8 @@ public class OpenAiClient {
                 "messages", List.of(
                         Map.of("role", "system", "content", systemPrompt),
                         Map.of("role", "user", "content", userPrompt)));
-
-        Map<String, Object> response;
         try {
-            response = http.post()
+            return http.post()
                     .uri("/chat/completions")
                     .body(body)
                     .retrieve()
@@ -68,8 +86,6 @@ public class OpenAiClient {
         } catch (RuntimeException e) {
             throw new ApiException(HttpStatus.BAD_GATEWAY, "OpenAI request failed: " + e.getMessage());
         }
-
-        return firstMessageContent(response);
     }
 
     @SuppressWarnings("unchecked")

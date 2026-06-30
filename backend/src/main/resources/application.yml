@@ -25,8 +25,12 @@ openai:
   chat-model: gpt-4o-mini
   # Stronger model for the low-frequency, quality-critical judgment calls (resume
   # scoring + job re-rank). gpt-5.4-mini brings reasoning to these paths while costing
-  # less than the old gpt-4o. Falls back to gpt-4o-mini if the key lacks access.
+  # less than the old gpt-4o.
   judgment-model: gpt-5.4-mini
+  # If a judgment call fails (the key lacks access to judgment-model, or it rejects
+  # the request), retry once on this model. gpt-4o keeps the quality bar for these
+  # calls rather than dropping to the cheap chat model.
+  judgment-fallback-model: gpt-4o
   embedding-model: text-embedding-3-small
 
 # JSearch (RapidAPI) — live job postings. Key from .env locally, SSM in prod.
