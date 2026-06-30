@@ -5,7 +5,12 @@
 // it finishes. Broadcast via a listener set for useSyncExternalStore, the same
 // reactive pattern as session.ts.
 import { analyzeResume, saveProfile, uploadResume } from "@/lib/api";
-import { clearOnboardingDraft, flagAnalyzeError, type OnboardingDraft } from "@/lib/onboardingDraft";
+import {
+  clearOnboardingDraft,
+  clearOnboardingForm,
+  flagAnalyzeError,
+  type OnboardingDraft,
+} from "@/lib/onboardingDraft";
 import type { Profile } from "@/types";
 
 export type AnalysisStatus =
@@ -69,6 +74,7 @@ export async function startAnalysis(draft: OnboardingDraft): Promise<void> {
       score: analysis.score,
     });
     clearOnboardingDraft();
+    clearOnboardingForm(); // onboarding complete — drop the persisted wizard inputs
     setState({ phase: "done", analysisId: analysis.id, resumeId: uploaded.id, role });
   } catch {
     // Surface a friendly message on whichever page picks the failure up.

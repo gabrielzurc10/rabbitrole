@@ -16,7 +16,13 @@ import { Stepper } from "@/components/Stepper";
 import { AutoHeight } from "@/components/AutoHeight";
 import { peekProfile } from "@/lib/api";
 import { titleCase } from "@/lib/text";
-import { setOnboardingDraft, takeAnalyzeError } from "@/lib/onboardingDraft";
+import {
+  getOnboardingDraft,
+  loadOnboardingForm,
+  saveOnboardingForm,
+  setOnboardingDraft,
+  takeAnalyzeError,
+} from "@/lib/onboardingDraft";
 import { useRequireAuth } from "@/lib/useRequireAuth";
 import type { CityPreference, EmploymentType } from "@/types";
 
@@ -56,6 +62,50 @@ export default function OnboardingPage() {
   const [remote, setRemote] = useState<boolean>(false);
   const [employmentTypes, setEmploymentTypes] = useState<EmploymentType[]>([]);
   const [cities, setCities] = useState<CityPreference[]>([]);
+
+  // True once the saved inputs have been read back (or confirmed absent). Gates the
+  // persist effect below so the initial empty render can't clobber a saved draft
+  // before we've restored it.
+  const [hydrated, setHydrated] = useState(false);
+  // Set when we restored inputs but couldn't recover the resume file, so the Resume
+  // step can prompt the user to re-attach it.
+  const [needsReattach, setNeedsReattach] = useState(false);
+
+  // Restore the wizard's inputs after a full reload — chiefly a forced re-login that
+  // bounced the user out mid-flow. The File isn't serializable: recover it from the
+  // in-flight draft if that survived (a soft nav back from a failed analysis), else
+  // drop the user on the Resume step to re-attach it with everything else intact.
+  useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect -- one-shot mount restore of
+       browser-only state; can't seed via useState without a hydration mismatch */
+    const saved = loadOnboardingForm();
+    if (saved) {
+      setFullName(saved.fullName);
+      setRoles(saved.roles);
+      setRemote(saved.remote);
+      setEmploymentTypes(saved.employmentTypes);
+      setCities(saved.cities);
+      const draftFile = getOnboardingDraft()?.file ?? null;
+      if (draftFile) {
+        setFile(draftFile);
+        setStep(saved.step);
+      } else if (saved.step > 2) {
+        setStep(2); // past the resume step but the file is gone — re-attach it
+        setNeedsReattach(true);
+      } else {
+        setStep(saved.step);
+      }
+    }
+    setHydrated(true);
+    /* eslint-enable react-hooks/set-state-in-effect */
+  }, []);
+
+  // Mirror inputs to sessionStorage as they change so a forced re-login (or any
+  // reload) doesn't lose the user's work. Skipped until restore has run.
+  useEffect(() => {
+    if (!hydrated) return;
+    saveOnboardingForm({ step, fullName, roles, remote, employmentTypes, cities });
+  }, [hydrated, step, fullName, roles, remote, employmentTypes, cities]);
 
   // Remote postings are location-agnostic, so cities only apply for a non-remote search.
   // No cities = "all locations" (allowed); any city that IS added must be filled in.
@@ -157,6 +207,11 @@ export default function OnboardingPage() {
             {step === 2 && (
               <div>
                 <ResumeUploader onFile={setFile} centered fileName={file?.name} />
+                {needsReattach && !file && (
+                  <p className="mt-3 text-center text-sm text-muted-foreground">
+                    We saved your details — please re-attach your resume to continue.
+                  </p>
+                )}
               </div>
             )}
 
