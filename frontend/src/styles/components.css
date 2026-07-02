@@ -22,7 +22,8 @@
        (bg-card) so the pill sits on-palette above the darker page. 3-column grid keeps
        the tabs centered (col 2) regardless of the brand/controls widths on the sides. */
     @apply mx-auto grid h-14 max-w-4xl grid-cols-[1fr_auto_1fr] items-center
-      rounded-full bg-background px-4 dark:bg-card shadow-[0_0_30px_rgba(0,0,0,0.08)];
+      rounded-full bg-background px-4 dark:bg-card
+      shadow-[0_0_30px_rgba(0,0,0,0.08)] dark:shadow-[0_0_30px_rgba(0,0,0,0.5)];
   }
   .brand {
     @apply flex items-center gap-2 text-lg font-semibold tracking-tight;
@@ -36,7 +37,7 @@
     @apply motion-safe:transition-[transform,width] motion-safe:duration-300 ease-out;
   }
   .site-footer {
-    @apply mt-24 border-t border-foreground/20 bg-white dark:border-white/20 dark:bg-transparent;
+    @apply mt-24 bg-white dark:bg-transparent;
   }
   .site-footer-inner {
     @apply mx-auto max-w-5xl px-4 py-12 sm:px-6 lg:px-8;
@@ -132,9 +133,11 @@
     @apply h-10 w-10 p-0;
   }
   .btn-primary {
-    /* Token-driven spring-green -> teal sweep (single source: --primary / --accent). */
+    /* Token-driven spring-green -> teal sweep (single source: --primary / --accent).
+       Dark mode: near-black text (--primary-foreground) — white on the bright
+       gradient reads washed out. */
     @apply bg-gradient-to-r from-primary to-accent text-foreground
-      shadow-sm hover:opacity-90;
+      shadow-sm hover:opacity-90 dark:text-primary-foreground;
   }
   .btn-secondary {
     /* Dark: --muted nearly matches the page/card, so use the theme's slate hue
@@ -152,9 +155,10 @@
     @apply bg-transparent hover:bg-muted dark:hover:bg-[hsl(217_33%_24%)];
   }
   .btn-critical {
-    /* Destructive action. The base .btn transition animates the lighten on hover. */
-    @apply bg-critical text-white
-      hover:bg-[hsl(0_88%_62%)] dark:hover:bg-[hsl(0_88%_74%)];
+    /* Destructive action. Fixed shades (not the --critical token, which flips per
+       theme) so the button looks identical in light and dark mode. The base .btn
+       transition animates the lighten on hover. */
+    @apply bg-[hsl(0_88%_52%)] text-white hover:bg-[hsl(0_88%_62%)];
   }
 
   /* ---------- colour icons (raster illustrations) ---------- */
@@ -370,9 +374,17 @@
   .job-sheet {
     /* Slides up from the bottom; rounded top, capped height. A flex column that does NOT
        scroll as a whole — the grab handle and close button stay anchored at the top, and
-       only the body below them scrolls, so every section stays reachable. */
+       only the body below them scrolls, so every section stays reachable. Radix keeps it
+       mounted until the closed-state animation ends, so the pull-down plays out. */
     @apply fixed inset-x-0 bottom-0 z-50 flex max-h-[85vh] flex-col overflow-hidden
-      rounded-t-2xl bg-background p-4 pt-6 shadow-lg focus:outline-none;
+      rounded-t-2xl bg-background p-4 pt-6 shadow-lg focus:outline-none
+      motion-safe:data-[state=open]:animate-[sheet-up_0.3s_cubic-bezier(0.32,0.72,0,1)]
+      motion-safe:data-[state=closed]:animate-[sheet-down_0.25s_ease-in_forwards];
+  }
+  .job-sheet-overlay {
+    /* Backdrop fades in step with the sheet's slide. */
+    @apply motion-safe:data-[state=open]:animate-[fade-in_0.3s_ease-out]
+      motion-safe:data-[state=closed]:animate-[fade-out_0.25s_ease-in_forwards];
   }
   .job-sheet-handle {
     /* Anchored grab handle — shrink-0 so it never scrolls with the body. */
@@ -382,16 +394,6 @@
     /* The only scrolling region; min-h-0 lets it shrink below content so it scrolls
        instead of pushing the sheet past its max height. */
     @apply min-h-0 flex-1 overflow-y-auto pb-[env(safe-area-inset-bottom)];
-  }
-  .job-sheet-totop {
-    /* Back-to-top button anchored to the sheet's bottom-right (not the viewport, which
-       is why it can't reuse .scroll-top). Same pill look; fades in past a scroll depth. */
-    @apply absolute bottom-4 right-4 z-20 inline-flex h-11 w-11 items-center justify-center
-      rounded-full bg-card text-foreground shadow-[0_0_15px_rgba(0,0,0,0.15)]
-      transition-all duration-200 hover:bg-muted
-      focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
-      focus-visible:ring-offset-2 focus-visible:ring-offset-background
-      motion-reduce:transition-none;
   }
 
   /* ---------- legal pages (terms / privacy) ---------- */
@@ -645,7 +647,8 @@
   /* ---------- back-to-top (floating) ---------- */
   .scroll-top {
     @apply fixed bottom-6 right-6 z-40 inline-flex h-11 w-11 items-center justify-center
-      rounded-full bg-card text-foreground shadow-[0_0_15px_rgba(0,0,0,0.15)]
+      rounded-full bg-card text-foreground
+      shadow-[0_0_15px_rgba(0,0,0,0.15)] dark:shadow-[0_0_15px_rgba(0,0,0,0.6)]
       transition-all duration-200 hover:bg-muted
       focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
       focus-visible:ring-offset-2 focus-visible:ring-offset-background

@@ -4,6 +4,7 @@ import { useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { isAuthenticated } from "@/lib/auth";
+import { cn } from "@/lib/cn";
 
 // The marketing/landing, signed-in account pages, and the legal/contact pages get
 // the footer. The focused flows (login, onboarding, analyzing, jobs) stay chrome-free.
@@ -50,7 +51,9 @@ export function Footer() {
   const columns = authed ? LINK_COLUMNS.filter((c) => c.title !== "Product") : LINK_COLUMNS;
 
   return (
-    <footer className="site-footer">
+    // The landing page sits on the wave background, so the footer goes transparent
+    // there; everywhere else it keeps its solid surface.
+    <footer className={cn("site-footer", route === "/" && "bg-transparent")}>
       <div className="site-footer-inner">
         <div className="footer-top">
           {/* Brand + tagline */}

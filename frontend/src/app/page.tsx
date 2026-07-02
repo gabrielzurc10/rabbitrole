@@ -48,7 +48,7 @@ export default function Home() {
       <div className="page">
         {/* Hero — centered in the first screen; the showcase sits below the fold. */}
         <section className="flex min-h-[calc(100vh-7rem)] items-center justify-center pb-20 sm:pb-28">
-          <div className="card mx-auto max-w-3xl p-8 text-center motion-safe:animate-[slide-up_0.4s_ease-out_both] sm:p-12">
+          <div className="mx-auto max-w-3xl p-8 text-center motion-safe:animate-[slide-up_0.4s_ease-out_both] sm:p-12">
             <span className="badge badge-glass mb-5">
               <ColorIcon name="sparkles" className="h-3.5 w-3.5 text-primary-strong" />
               AI resume reviewer &amp; job matcher
@@ -135,7 +135,7 @@ export default function Home() {
         {/* Closing call-to-action */}
         <section className="mx-auto mt-28 max-w-4xl sm:mt-36">
           <Reveal>
-            <div className="card p-10 text-center sm:p-14">
+            <div className="p-10 text-center sm:p-14">
               <h2 className="text-balance text-2xl font-semibold tracking-tight sm:text-3xl">
                 Ready to land your next role?
               </h2>

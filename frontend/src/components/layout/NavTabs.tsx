@@ -84,7 +84,12 @@ export function NavTabs() {
             aria-current={active ? "page" : undefined}
             className={cn(
               "btn btn-sm group relative z-10 text-foreground",
-              !active && "hover:bg-muted",
+              // Match .btn-primary: near-black text on the bright green thumb in dark mode.
+              // Hover: dark --muted almost matches the navbar pill's bg-card, so lift to
+              // the same raised slate the ghost/outline buttons use.
+              active
+                ? "dark:text-primary-foreground"
+                : "hover:bg-muted dark:hover:bg-[hsl(217_33%_24%)]",
             )}
           >
             {tab.href === "/resume/" && analyzing ? (
