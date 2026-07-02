@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { Job } from "@/types";
 import { JobDetail } from "@/components/JobDetail";
@@ -24,11 +24,14 @@ export function JobDetailSheet({
   const bodyRef = useRef<HTMLDivElement>(null);
   const [showTop, setShowTop] = useState(false);
 
-  // Reset scroll + hide the button whenever a different posting opens.
-  useEffect(() => {
-    bodyRef.current?.scrollTo({ top: 0 });
+  // Hide the back-to-top button whenever a different posting opens — adjust state during
+  // render (React's recommended alternative to a reset effect). Scroll position resets on
+  // its own because the body element is keyed by job id below, so it remounts at the top.
+  const [prevJobId, setPrevJobId] = useState(job?.id);
+  if (job?.id !== prevJobId) {
+    setPrevJobId(job?.id);
     setShowTop(false);
-  }, [job?.id]);
+  }
 
   function toTop() {
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -50,11 +53,12 @@ export function JobDetailSheet({
             <Icon name="x" className="h-4 w-4" />
           </DialogPrimitive.Close>
           <div
+            key={job?.id ?? "empty"}
             ref={bodyRef}
             className="job-sheet-body"
             onScroll={(e) => setShowTop(e.currentTarget.scrollTop > 400)}
           >
-            {job && <JobDetail key={job.id} job={job} />}
+            {job && <JobDetail job={job} />}
           </div>
           <button
             type="button"

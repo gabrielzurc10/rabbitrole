@@ -84,6 +84,9 @@ export function ResumeCard({
   // on the browser's new-tab/search page in some browsers (and can spawn a stray tab).
   useEffect(() => {
     if (!resumeId || urls) return;
+    // loadUrls only setState()s after a network round-trip, so it's not a synchronous
+    // render cascade — this is the classic "fetch on mount" effect, not a derived-state one.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadUrls().catch(() => {}); // best-effort; view()/download() still retry on click
     // eslint-disable-next-line react-hooks/exhaustive-deps -- re-run only when the resume/meta changes
   }, [resumeId, meta]);
