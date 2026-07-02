@@ -5,26 +5,14 @@ import Link from "next/link";
 import { Card, CardBody, CardTitle, CardSubtitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ColorIcon } from "@/components/ui/color-icon";
-import { Dialog } from "@/components/ui/dialog";
 import { ErrorAlert } from "@/components/ui/alert";
 import { MatchRing } from "@/components/MatchRing";
 import { getResume, getResumeBlob, getResumeFileUrls, peekResume, ApiError } from "@/lib/api";
 import type { ResumeUpload } from "@/types";
 
 /**
- * Small/touch screens (phones) don't render PDFs inside an iframe — the inline
- * modal just shows blank — so we open the file in a new tab there instead, where
- * the mobile browser renders it as a full-page navigation.
- */
-function prefersNewTab(): boolean {
-  if (typeof window === "undefined") return false;
-  return window.matchMedia("(max-width: 768px)").matches;
-}
-
-/**
  * The profile's resume summary card: the score ring, the uploaded file's name,
- * and actions to view it (PDFs render in an inline modal on desktop, a new tab on
- * mobile; other formats open in a new tab), download it, or open the full review.
+ * and actions to view it (opens in a new tab), download it, or open the full review.
  *
  * The file loads from short-lived presigned S3 URLs (one for inline view, one for
  * download) so it bypasses the Lambda response path, which mangles binary files
@@ -50,7 +38,6 @@ export function ResumeCard({
   );
   // Cached view/download URLs (presigned S3, or a local object URL fallback).
   const [urls, setUrls] = useState<{ view: string; download: string } | null>(null);
-  const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -82,7 +69,7 @@ export function ResumeCard({
       resolved = { view: presigned.viewUrl, download: presigned.downloadUrl ?? presigned.viewUrl };
     } else {
       const blob = await getResumeBlob(resumeId as string);
-      // Force the type so the iframe renders the PDF instead of showing raw bytes.
+      // Force the type so the browser renders the PDF inline instead of showing raw bytes.
       const typed = isPdf ? new Blob([blob], { type: "application/pdf" }) : blob;
       const objectUrl = URL.createObjectURL(typed);
       resolved = { view: objectUrl, download: objectUrl };
@@ -91,26 +78,43 @@ export function ResumeCard({
     return resolved;
   }
 
+  // Prefetch the view/download URL once the resume metadata is known, so clicking
+  // "View resume" can open a tab *synchronously* (below). Browsers only reliably open
+  // a new tab from within the click's user gesture; an async open-then-redirect lands
+  // on the browser's new-tab/search page in some browsers (and can spawn a stray tab).
+  useEffect(() => {
+    if (!resumeId || urls) return;
+    void loadUrls().catch(() => {}); // best-effort; view()/download() still retry on click
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- re-run only when the resume/meta changes
+  }, [resumeId, meta]);
+
+  // Open a URL in a new tab via an anchor click — reliable for both blob: (local dev)
+  // and https (presigned S3) URLs. `window.open(blobUrl)` is refused by Chrome, which
+  // treats the blob string as an omnibox search instead of navigating to it.
+  function openInNewTab(url: string) {
+    const a = document.createElement("a");
+    a.href = url;
+    a.target = "_blank";
+    a.rel = "noreferrer";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
+
   async function view() {
     setError(null);
+    // Fast path: URL already prefetched — open synchronously so the click's user
+    // activation is preserved and the browser reliably opens the file in a new tab.
+    if (urls) {
+      openInNewTab(urls.view);
+      return;
+    }
+    // Slow path: prefetch hasn't resolved yet (clicked immediately on load).
     setBusy(true);
-    // A non-PDF (.docx) always opens in a new tab; a PDF does too on mobile, where
-    // the iframe preview won't render. The tab must be opened now, inside the click
-    // gesture, or mobile popup blockers reject it after the await below.
-    const newTab = !isPdf || prefersNewTab();
-    const pending = newTab ? window.open("", "_blank") : null;
     try {
       const { view: url } = await loadUrls();
-      if (!newTab) {
-        setOpen(true);
-      } else if (pending) {
-        pending.opener = null;
-        pending.location.replace(url);
-      } else {
-        window.open(url, "_blank", "noopener"); // popup blocked — best effort
-      }
+      openInNewTab(url);
     } catch (e) {
-      pending?.close();
       setError(e instanceof ApiError ? e.message : "Could not open the resume.");
     } finally {
       setBusy(false);
@@ -179,23 +183,6 @@ export function ResumeCard({
 
         {error && <ErrorAlert message={error} />}
       </CardBody>
-
-      <Dialog open={open} onClose={() => setOpen(false)} className="max-w-3xl" title={name}>
-        <h2 className="mb-3 truncate pr-8 text-lg font-semibold">{name}</h2>
-        {urls?.view && (
-          <iframe
-            src={urls.view}
-            title={name}
-            className="h-[75vh] w-full rounded-lg border border-border"
-          />
-        )}
-        <div className="mt-3 flex justify-end">
-          <Button variant="outline" size="sm" className="group" onClick={download} disabled={busy}>
-            <ColorIcon name="download" className="icon-nudge-up h-4 w-4" />
-            Download
-          </Button>
-        </div>
-      </Dialog>
     </Card>
   );
 }

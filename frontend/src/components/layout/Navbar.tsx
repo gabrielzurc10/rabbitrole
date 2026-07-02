@@ -7,18 +7,29 @@ import { AuthButton } from "@/components/layout/AuthButton";
 import { NavTabs } from "@/components/layout/NavTabs";
 import { isSigningIn, subscribeSigningIn } from "@/lib/signingStatus";
 import { isAuthenticated } from "@/lib/auth";
+import { isOnboarded, subscribeOnboarded } from "@/lib/session";
 import { cn } from "@/lib/cn";
 
-// localStorage isn't reactive; re-read auth on each route change (usePathname), the
-// same approach as AuthButton — auth state only flips alongside a navigation.
-const noopSubscribe = () => () => {};
+// Pages whose paths render the Jobs/Resume/Profile tabs even before the onboarded
+// flag resolves — kept in sync with NavTabs' own visibility rule.
+const TAB_PATHS = ["/jobs", "/resume", "/profile"];
 
 export function Navbar() {
   const pathname = usePathname();
   const signingIn = useSyncExternalStore(subscribeSigningIn, isSigningIn, () => false);
-  const signedIn = useSyncExternalStore(noopSubscribe, isAuthenticated, () => false);
+  // Mirror NavTabs' visibility: the tabs show once signed in AND onboarded, or
+  // whenever you're actually on a tab page. We collapse the brand on mobile only
+  // then, so the centered tabs have room — but keep it on pages without tabs
+  // (landing, onboarding), where there's nothing to make room for.
+  const onboarded = useSyncExternalStore(
+    subscribeOnboarded,
+    () => isAuthenticated() && isOnboarded(),
+    () => false,
+  );
   // Minimal header (no tabs/controls) on the focused sign-in + analyze pages.
   const minimal = pathname.startsWith("/login") || pathname.startsWith("/analyzing");
+  const tabsShowing =
+    !minimal && (onboarded || TAB_PATHS.some((p) => pathname.startsWith(p)));
   // Brand is non-clickable only while a transient step is *running* — the analyze
   // animation, or the "Signing you in…" animation — so users can't bail mid-step. On the
   // normal sign-in form the logo stays clickable (back to the landing page).
@@ -28,30 +39,26 @@ export function Navbar() {
       <div className="navbar-inner">
         {lockBrand ? (
           // Same mark, but a plain span — no link, no hover hop — so it does nothing.
-          <span className="brand justify-self-start select-none">
+          <span
+            className={cn(
+              "brand justify-self-start select-none",
+              tabsShowing && "max-sm:hidden",
+            )}
+          >
             {/* eslint-disable-next-line @next/next/no-img-element -- static export, unoptimized */}
-            <img
-              src="/icons/rabbitrole.png"
-              alt=""
-              className={cn("h-6 w-auto", signedIn && !minimal && "max-sm:hidden")}
-            />
-            {/* When signed in, the brand collapses on mobile to free room for the centered
-                tabs; signed out (e.g. landing) there are no tabs, so it stays full. */}
-            <span className={cn(signedIn && !minimal && "max-sm:hidden")}>
+            <img src="/icons/rabbitrole.png" alt="" className="h-6 w-auto" />
+            <span>
               rabbit<span className="gradient-text">role</span>
             </span>
           </span>
         ) : (
-          <Link href="/" className="brand justify-self-start">
+          <Link
+            href="/"
+            className={cn("brand justify-self-start", tabsShowing && "max-sm:hidden")}
+          >
             {/* eslint-disable-next-line @next/next/no-img-element -- static export, unoptimized */}
-            <img
-              src="/icons/rabbitrole.png"
-              alt=""
-              className={cn("h-6 w-auto", signedIn && !minimal && "max-sm:hidden")}
-            />
-            {/* When signed in, the brand collapses on mobile to free room for the centered
-                tabs; signed out (e.g. landing) there are no tabs, so it stays full. */}
-            <span className={cn(signedIn && !minimal && "max-sm:hidden")}>
+            <img src="/icons/rabbitrole.png" alt="" className="h-6 w-auto" />
+            <span>
               rabbit<span className="gradient-text">role</span>
             </span>
           </Link>

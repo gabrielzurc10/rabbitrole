@@ -1,9 +1,11 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { Job } from "@/types";
 import { JobDetail } from "@/components/JobDetail";
 import { Icon } from "@/components/ui/icon";
+import { cn } from "@/lib/cn";
 
 /**
  * Mobile-only bottom sheet for the selected posting. Mount it only below the `lg`
@@ -19,6 +21,20 @@ export function JobDetailSheet({
   open: boolean;
   onClose: () => void;
 }) {
+  const bodyRef = useRef<HTMLDivElement>(null);
+  const [showTop, setShowTop] = useState(false);
+
+  // Reset scroll + hide the button whenever a different posting opens.
+  useEffect(() => {
+    bodyRef.current?.scrollTo({ top: 0 });
+    setShowTop(false);
+  }, [job?.id]);
+
+  function toTop() {
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    bodyRef.current?.scrollTo({ top: 0, behavior: reduce ? "auto" : "smooth" });
+  }
+
   return (
     <DialogPrimitive.Root open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogPrimitive.Portal>
@@ -33,7 +49,24 @@ export function JobDetailSheet({
           >
             <Icon name="x" className="h-4 w-4" />
           </DialogPrimitive.Close>
-          <div className="job-sheet-body">{job && <JobDetail key={job.id} job={job} />}</div>
+          <div
+            ref={bodyRef}
+            className="job-sheet-body"
+            onScroll={(e) => setShowTop(e.currentTarget.scrollTop > 400)}
+          >
+            {job && <JobDetail key={job.id} job={job} />}
+          </div>
+          <button
+            type="button"
+            onClick={toTop}
+            aria-label="Back to top"
+            className={cn(
+              "job-sheet-totop",
+              showTop ? "scroll-top-visible" : "scroll-top-hidden",
+            )}
+          >
+            <Icon name="arrow-up" className="h-5 w-5" />
+          </button>
         </DialogPrimitive.Content>
       </DialogPrimitive.Portal>
     </DialogPrimitive.Root>

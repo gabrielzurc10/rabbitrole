@@ -313,13 +313,15 @@
 
   /* ---------- job detail (panel + sheet shared) ---------- */
   .job-detail {
-    /* White card matching the list cards; fills the panel height with a pinned header
-       and footer, and a scrollable body in between. */
-    @apply flex h-full flex-col overflow-hidden rounded-2xl bg-card text-card-foreground
-      shadow-[0_0_15px_rgba(0,0,0,0.1)];
+    /* White card matching the list cards. On mobile it's a plain block inside the
+       scrolling sheet (no overflow clip, so the top row can go sticky); on desktop it
+       fills the panel height with a pinned header/footer and an internally scrolling body. */
+    @apply rounded-2xl bg-card text-card-foreground
+      lg:flex lg:h-full lg:flex-col lg:overflow-hidden lg:shadow-[0_0_15px_rgba(0,0,0,0.1)];
   }
   .job-detail-top {
-    /* Pinned header + Apply; stays put while the body below scrolls. */
+    /* Pinned header + Apply on desktop (non-shrinking flex top); on mobile it scrolls
+       with the rest of the sheet body. */
     @apply shrink-0 space-y-4 p-5 pb-4;
   }
   .job-detail-header {
@@ -340,9 +342,10 @@
     @apply shrink-0 space-y-5 px-5 pb-6;
   }
   .job-detail-scroll {
-    /* Only the description text scrolls; takes the remaining height. Scrollbar styling
-       is global (see globals.css base layer). */
-    @apply min-h-0 flex-1 overflow-y-auto px-5 pb-5;
+    /* Desktop: only the description scrolls, taking the remaining flex height. Mobile:
+       flows into the sheet's own scroll (the whole sheet scrolls there). Scrollbar
+       styling is global (see globals.css base layer). */
+    @apply px-5 pb-5 lg:min-h-0 lg:flex-1 lg:overflow-y-auto;
   }
   .job-detail-title {
     @apply font-semibold leading-snug;
@@ -365,15 +368,30 @@
 
   /* ---------- job detail bottom sheet (mobile, radix) ---------- */
   .job-sheet {
-    /* Slides up from the bottom; rounded top, capped height with internal scroll. */
-    @apply fixed inset-x-0 bottom-0 z-50 max-h-[85vh] overflow-y-auto rounded-t-2xl
-      bg-background p-4 pt-6 shadow-lg focus:outline-none;
+    /* Slides up from the bottom; rounded top, capped height. A flex column that does NOT
+       scroll as a whole — the grab handle and close button stay anchored at the top, and
+       only the body below them scrolls, so every section stays reachable. */
+    @apply fixed inset-x-0 bottom-0 z-50 flex max-h-[85vh] flex-col overflow-hidden
+      rounded-t-2xl bg-background p-4 pt-6 shadow-lg focus:outline-none;
   }
   .job-sheet-handle {
-    @apply mx-auto mb-3 h-1.5 w-10 rounded-full bg-border;
+    /* Anchored grab handle — shrink-0 so it never scrolls with the body. */
+    @apply mx-auto mb-3 h-1.5 w-10 shrink-0 rounded-full bg-border;
   }
   .job-sheet-body {
-    @apply pb-[env(safe-area-inset-bottom)];
+    /* The only scrolling region; min-h-0 lets it shrink below content so it scrolls
+       instead of pushing the sheet past its max height. */
+    @apply min-h-0 flex-1 overflow-y-auto pb-[env(safe-area-inset-bottom)];
+  }
+  .job-sheet-totop {
+    /* Back-to-top button anchored to the sheet's bottom-right (not the viewport, which
+       is why it can't reuse .scroll-top). Same pill look; fades in past a scroll depth. */
+    @apply absolute bottom-4 right-4 z-20 inline-flex h-11 w-11 items-center justify-center
+      rounded-full bg-card text-foreground shadow-[0_0_15px_rgba(0,0,0,0.15)]
+      transition-all duration-200 hover:bg-muted
+      focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
+      focus-visible:ring-offset-2 focus-visible:ring-offset-background
+      motion-reduce:transition-none;
   }
 
   /* ---------- legal pages (terms / privacy) ---------- */
